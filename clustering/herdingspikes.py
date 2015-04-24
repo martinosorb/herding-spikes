@@ -275,14 +275,14 @@ class spikeclass(object):
         Returns an array containing the indices corresponding to KEPT data.
         """
         self.Backup()
-        self.__hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
+        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
         # the *1.001 is needed to include the rightmost and topmost points in the bins ... bad coding indeed.
         binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
         binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
-        self.__nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
-        self.__nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
+        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
         initialn = self.NData()
-        ind = np.where(self.__hist[self.__nbx,self.__nby]>threshold)[0]
+        ind = np.where(hist[nbx,nby]>threshold)[0]
         self.KeepOnly(ind)
         print('FilterLowDensity removed '+str(initialn-self.NData())+' datapoints.')
         return ind
@@ -365,7 +365,19 @@ class spikeclass(object):
         print('Crop removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
         
-
+    def Classify(self,nbins = [40,40],threshold = 5):
+        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
+        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
+        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
+        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
+        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+        ind = np.where(hist[nbx,nby]<=threshold)[0]
+        print "Based on "+str(len(ind))+" examples of bad shapes."
+        normalise = lambda X: X/np.max(np.abs(X),axis=0)
+        badshape = np.mean(normalise(self.Shapes()),axis=1)
+        score = np.dot(badshape,self.Shapes())
+        scorePCA = self.ShapePCA(ncomp=1)[0]
+        return score,scorePCA
         
         
         
