@@ -16,7 +16,8 @@ from sys import stdout
 
 def ImportInterpolated(filename,shapesupto=None):
     g=h5py.File(filename,'r')
-    A = spikeclass(np.array(g['Locations'].value,dtype=float).T)
+    A = spikeclass(0.5+np.array(g['Locations'].value,dtype=float).T)
+    print "Adding 0.5 to positions."
     A.LoadTimes(g['Times'].value)
     if shapesupto == None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
@@ -122,11 +123,11 @@ class spikeclass(object):
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio,12))
         ax = plt.subplot(121)
-        ax.grid(which='major', axis='x', linewidth=1, linestyle='-', color='0.75')
-        ax.grid(which='major', axis='y', linewidth=1, linestyle='-', color='0.75')
+        #ax.grid(which='major', axis='x', linewidth=1, linestyle='-', color='0.75')
+        #ax.grid(which='major', axis='y', linewidth=1, linestyle='-', color='0.75')
         ax.set_xlim(x1,x2)
         ax.set_ylim(y1,y2)
-        plt.scatter(self.__data[0],self.__data[1],marker='o',s=3,edgecolors='none',c=self.Colours()[self.__ClusterID])
+        plt.scatter(self.__data[0],self.__data[1],marker='o',s=1,edgecolors='none',c=self.Colours()[self.__ClusterID])
         ax.set_aspect('equal')
         plt.xticks(np.arange(np.round(x1),np.ceil(x2)))
         plt.yticks(np.arange(np.round(y1),np.ceil(y2)))   
