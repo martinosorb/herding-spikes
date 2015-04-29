@@ -59,7 +59,7 @@ class spikeclass(object):
                 self.__times = np.array([])
                 self.__shapes = np.array([])
                 self.__colours = np.array([])
-                self.__sampling = []
+                self.__sampling = 0
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2,ndata): raise ValueError('Data must be a (2,N) array')
@@ -69,7 +69,7 @@ class spikeclass(object):
             self.__times = np.array([])
             self.__shapes = np.array([])
             self.__colours = np.array([])
-            self.__sampling = []
+            self.__sampling = 0
         else:
             raise ValueError('Can be initialised with 1 argument (the data set or a file) or 2 arguments (data, ClusterID)')
         self.Backup()
@@ -222,7 +222,7 @@ class spikeclass(object):
 
     def Save(self,string):
         """Saves data, cluster centres and ClusterIDs to a hdf5 file."""
-        g=h5py.File(string+'.hdf5','w-')
+        g=h5py.File(string,'w-')
         g.create_dataset("data",data=self.__data)
         if self.__c != np.array([]):
             g.create_dataset("centres",data=self.__c)
@@ -232,6 +232,8 @@ class spikeclass(object):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
             g.create_dataset("shapes",data=self.__shapes)
+	if self.__sampling != 0:
+            g.create_dataset("Sampling",data=self.__sampling)
         g.close()
 
     def MeanShift(self,h):
