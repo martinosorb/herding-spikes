@@ -254,10 +254,10 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self,h,alpha,PrincComp=[]):
+    def CombinedMeanShift(self,h,alpha,n=1,PrincComp=[]):
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0)
         if not PrincComp.any():
-          PrincComp = self.ShapePCA(1)
+          PrincComp = self.ShapePCA(n)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         print self.__data.shape, PrincComp.shape
@@ -380,21 +380,6 @@ class spikeclass(object):
         self.KeepOnly(d_ind_kept)
         print('Crop removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
-
-    def Classify(self,nbins = [40,40],threshold = 5):
-        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
-        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
-        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
-        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
-        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
-        ind = np.where(hist[nbx,nby]<=threshold)[0]
-        print "Based on "+str(len(ind))+" examples of bad shapes."
-        normalise = lambda X: X/np.max(np.abs(X),axis=0)
-        badshape = np.mean(normalise(self.Shapes()),axis=1)
-        score = np.dot(badshape,self.Shapes())
-        scorePCA = self.ShapePCA(ncomp=1)[0]
-        return score,scorePCA
-
 
 
 
