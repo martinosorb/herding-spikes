@@ -19,6 +19,7 @@ def ImportInterpolated(filename,shapesupto=None):
     A = spikeclass(0.5+np.array(g['Locations'].value,dtype=float).T)
     print "Adding 0.5 to positions."
     A.LoadTimes(g['Times'].value)
+    A.SetSampling(g['Sampling'].value)
     if shapesupto == None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
     elif shapesupto > 0:
@@ -29,7 +30,7 @@ def ImportInterpolated(filename,shapesupto=None):
 
 class spikeclass(object):
     """A class containing code to work on 2d data with the Mean Shift clustering algorithms and various filters.
-    
+
     Can be initialised in three ways:
         -- with a string pointing to an hdf5 file. This file must have been previously saved using this class.
         -- with a single [2,N] array containing raw data.
@@ -46,6 +47,7 @@ class spikeclass(object):
                 self.__times = np.array(g['times']) if 'times' in g.keys() else np.array([])
                 self.__shapes = np.array(g['shapes']) if 'shapes' in g.keys() else np.array([])
                 self.__colours = np.array([])
+                self.__sampling = g['Sampling'].value
                 g.close()
             else:
                 givendata = args[0]
@@ -57,6 +59,7 @@ class spikeclass(object):
                 self.__times = np.array([])
                 self.__shapes = np.array([])
                 self.__colours = np.array([])
+                self.__sampling = []
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2,ndata): raise ValueError('Data must be a (2,N) array')
@@ -66,27 +69,28 @@ class spikeclass(object):
             self.__times = np.array([])
             self.__shapes = np.array([])
             self.__colours = np.array([])
+            self.__sampling = []
         else:
             raise ValueError('Can be initialised with 1 argument (the data set or a file) or 2 arguments (data, ClusterID)')
         self.Backup()
-    
+
 
     def Backup(self):
         """Creates a checkpoint, to be used for a subsequent call to UndoLast()"""
         self.__backup = {0:self.__data,1:self.__ClusterID,2:self.__c,3:self.__shapes,4:self.__times}
-    
+
 
     def UndoLast(self):
         """The object restores the data as it was before the last call of a filter, or Backup()."""
         self.__data,self.__ClusterID,self.__c,self.__shapes,self.__times = self.__backup[0],self.__backup[1],self.__backup[2],self.__backup[3],self.__backup[4]
-        
+
     def Colours(self):
         if np.shape(self.__colours)[0] != self.NClusters():
             colours=plt.cm.spectral(np.random.permutation(np.linspace(0,1,num=self.NClusters())))
             colours=np.append(np.array([0,0,0,0.5]),colours[:-1])
             self.__colours=np.reshape(colours,(self.NClusters(),4))
         return self.__colours
-        
+
     def LogHistPlot(self,save=None):
         """Plots a density histogram. This does not work with the current data, but with data loaded by the most recent class constructor call."""
         #fig,ax = plt.subplots()
@@ -104,8 +108,8 @@ class spikeclass(object):
         plt.xlim((0,65))
         plt.ylim((0,65))
         if save != None:
-            plt.savefig(save)   
-        
+            plt.savefig(save)
+
     def DataPlot(self):
         """Plots the current data. If clustering was performed, the cluster centres and ID (colour) are plotted, otherwise a black and white scatterplot is plotted"""
         fig,ax = plt.subplots(figsize=(7,7))
@@ -118,7 +122,9 @@ class spikeclass(object):
         ax.set_xlim([min(self.__data[0]),max(self.__data[0])])
         ax.set_ylim([min(self.__data[1]),max(self.__data[1])])
 
-    
+    def PartPlot(self,window,save=None):
+        PartPlot(self,window[0],window[1],window[2],window[3],save)
+
     def PartPlot(self,x1,x2,y1,y2,save=None):
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio,12))
@@ -130,10 +136,10 @@ class spikeclass(object):
         plt.scatter(self.__data[0],self.__data[1],marker='o',s=1,edgecolors='none',c=self.Colours()[self.__ClusterID])
         ax.set_aspect('equal')
         plt.xticks(np.arange(np.round(x1),np.ceil(x2)))
-        plt.yticks(np.arange(np.round(y1),np.ceil(y2)))   
+        plt.yticks(np.arange(np.round(y1),np.ceil(y2)))
         if save != None:
-            plt.savefig(save)  
-  
+            plt.savefig(save)
+
     def ShapesPlot(self,clusters=None,save=None):
         if clusters == None:
             clusters = range(self.NClusters())
@@ -153,42 +159,42 @@ class spikeclass(object):
             plInds=range(np.min([30,myShapes.shape[1]]))
             [plt.plot(ic+np.arange(sl)/sl-.5,myShapes[:,i],color=self.Colours()[c],alpha=0.2) for i in plInds]
             plt.plot(ic+np.arange(sl)/sl-.5,np.mean(myShapes,axis=1),'-',color=self.__colours[c],lw=2.5)
-        
+
         plt.xlim((-.5,11.5))
         plt.yticks([])
         plt.xticks(np.arange(np.min((len(clusters),12))))
         plt.xlabel('Cluster ID')
         plt.grid(0)
         if save != None:
-            plt.savefig(save)  
-        
+            plt.savefig(save)
+
     def NData(self):
         """Returns the current number of datapoints."""
         return np.shape(self.__data)[1]
-        
+
     def NClusters(self):
         """Returns the current number of clusters, or 0 if no clustering was performed."""
         if np.size(self.__ClusterID):
             return np.shape(self.__c)[1]
         else:
             return 0
-            
+
     def Locations(self):
         """Returns the data set."""
         return self.__data
-        
+
     def Shapes(self):
         """Returns the shapes set."""
         return self.__shapes
-        
+
     def Times(self):
         """Returns the times set."""
         return self.__times
-        
+
     def ClusterID(self):
         """Returns an array containing the id of the cluster every data point belongs to."""
         return self.__ClusterID
-        
+
     def ClusterLoc(self):
         """Returns an array containing the locations of the cluster centres."""
         return np.array(self.__c)
@@ -196,6 +202,10 @@ class spikeclass(object):
     def ClusterSizes(self):
         """Returns an array containing the number of points in each cluster."""
         return itemfreq(self.__ClusterID)[:,1]
+
+    def Sampling(self):
+        """Returns the sampling rate."""
+        return self.__sampling
 
     def LoadShapes(self, shapes):
         assert np.size(np.shape(shapes)) == 2
@@ -206,6 +216,9 @@ class spikeclass(object):
         assert np.size(np.shape(times)) == 1
         assert np.shape(times)[0] == self.NData()
         self.__times = np.array(times)
+
+    def SetSampling(self, s):
+        self.__sampling = s
 
     def Save(self,string):
         """Saves data, cluster centres and ClusterIDs to a hdf5 file."""
@@ -220,7 +233,7 @@ class spikeclass(object):
         if self.__shapes != np.array([]):
             g.create_dataset("shapes",data=self.__shapes)
         g.close()
-        
+
     def MeanShift(self,h):
         """Performs the scikit-learn Mean Shift clustering. kwargs are passed to the MeanShift class."""
         MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0)
@@ -231,7 +244,7 @@ class spikeclass(object):
         self.__c = MS.cluster_centers_.T
         print "done."
         stdout.flush()
-        
+
     def ShapePCA(self,ncomp=None,white=False):
         print "Starting sklearn PCA...",
         stdout.flush()
@@ -240,24 +253,26 @@ class spikeclass(object):
         print "done."
         stdout.flush()
         return fit
-        
-    def CombinedMeanShift(self,h,alpha):
-        MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0)
-        PrincComp = self.ShapePCA(1)
+
+    def CombinedMeanShift(self,h,alpha,PrincComp=[]):
+        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0)
+        if not PrincComp.any():
+          PrincComp = self.ShapePCA(1)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
+        print self.__data.shape, PrincComp.shape
         fourvector = np.vstack((self.__data,alpha*PrincComp))
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T[0:1]
         print "done."
         stdout.flush()
-        
+
     def RemoveData(self,newn):
         """Randomly chooses datapoints and deletes all the others
-        
+
         Arguments:
-            
+
         newn -- the number of datapoints to be kept"""
         self.Backup()
         initialn = self.NData()
@@ -267,12 +282,12 @@ class spikeclass(object):
             print('RemoveData removed '+str(initialn-self.NData())+' datapoints.')
         else:
             print('RemoveData: No points were discarded.')
-                            
+
     # A Dangerous Method. Do not use more than once.
     # Also, I think it's better not to use it in combination with ReduceData
     def FilterLowDensity(self,threshold,nbins=[400,400]):
         """Bins points in 100 bins per axis and deletes points in bins with number of points <= threshold.
-        
+
         Returns an array containing the indices corresponding to KEPT data.
         """
         self.Backup()
@@ -287,7 +302,7 @@ class spikeclass(object):
         self.KeepOnly(ind)
         print('FilterLowDensity removed '+str(initialn-self.NData())+' datapoints.')
         return ind
-        
+
 
     def FilterSmallClusters(self,threshold):
         """Removes all datapoints belonging to clusters with 'threshold' or less datapoints."""
@@ -308,7 +323,7 @@ class spikeclass(object):
         self.__c = self.__c[:,c_ind_kept]
         print('FilterSmallClusters removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
-        
+
     def KeepOnly(self,ind_kept):
         #does not act on clusters!
         self.__data = self.__data[:,ind_kept]
@@ -365,7 +380,7 @@ class spikeclass(object):
         self.KeepOnly(d_ind_kept)
         print('Crop removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
-        
+
     def Classify(self,nbins = [40,40],threshold = 5):
         hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
         binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
@@ -379,11 +394,11 @@ class spikeclass(object):
         score = np.dot(badshape,self.Shapes())
         scorePCA = self.ShapePCA(ncomp=1)[0]
         return score,scorePCA
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
