@@ -18,14 +18,9 @@ from sys import stdout
 
 def ImportInterpolated(filename,shapesupto=None):
     g=h5py.File(filename,'r')
-<<<<<<< Updated upstream
     A = spikeclass(0.5+np.array(g['Locations'].value,dtype=float).T)
     print "Adding 0.5 to positions."
-    A.LoadTimes(g['Times'].value)
-=======
-    A = spikeclass(np.array(g['Locations'].value,dtype=float).T)
     A.LoadTimes(np.floor(g['Times'].value).astype(int))
->>>>>>> Stashed changes
     A.SetSampling(g['Sampling'].value)
     if shapesupto == None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
@@ -46,7 +41,7 @@ def ImportInterpolatedList(filenames,shapesupto=22):
     for i,f in enumerate(filenames):
       g = h5py.File(f,'r')
       print f
-      loc = np.append(loc, g['Locations'].value.T, axis=1)
+      loc = np.append(loc, 0.5+g['Locations'].value.T, axis=1)
       inds[i] = len(t) # store index of first spike
       t = np.append(t, np.floor(g['Times'].value).astype(int))
       s[i] = g['Sampling'].value
@@ -269,7 +264,7 @@ class spikeclass(object):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
             g.create_dataset("shapes",data=self.__shapes)
-	if self.__sampling != 0:
+        if self.__sampling != 0:
             g.create_dataset("Sampling",data=self.__sampling)
         g.close()
 
