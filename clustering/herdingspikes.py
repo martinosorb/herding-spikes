@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
+from sklearn.decomposition import RandomizedPCA
+from sklearn.decomposition import KernelPCA
 from scipy.stats import itemfreq
 import h5py
 import warnings
@@ -16,9 +18,14 @@ from sys import stdout
 
 def ImportInterpolated(filename,shapesupto=None):
     g=h5py.File(filename,'r')
+<<<<<<< Updated upstream
     A = spikeclass(0.5+np.array(g['Locations'].value,dtype=float).T)
     print "Adding 0.5 to positions."
     A.LoadTimes(g['Times'].value)
+=======
+    A = spikeclass(np.array(g['Locations'].value,dtype=float).T)
+    A.LoadTimes(np.floor(g['Times'].value).astype(int))
+>>>>>>> Stashed changes
     A.SetSampling(g['Sampling'].value)
     if shapesupto == None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
@@ -26,6 +33,36 @@ def ImportInterpolated(filename,shapesupto=None):
         A.LoadShapes(np.array(g['Shapes'].value).T[:shapesupto])
     g.close()
     return A
+
+def ImportInterpolatedList(filenames,shapesupto=22):
+    """ Helper function to read in spike data from a list of hdf5 files.
+    Returns a class object and the indices where each file begins.
+    """
+    loc = np.array([[],[]],dtype=float)
+    t = np.array([],dtype=int)
+    sh = np.array([], dtype=int)
+    inds = np.zeros(len(filenames),dtype=int)
+    s = np.zeros(len(filenames))
+    for i,f in enumerate(filenames):
+      g = h5py.File(f,'r')
+      print f
+      loc = np.append(loc, g['Locations'].value.T, axis=1)
+      inds[i] = len(t) # store index of first spike
+      t = np.append(t, np.floor(g['Times'].value).astype(int))
+      s[i] = g['Sampling'].value
+      #if shapesupto == None:
+      #  sh = np.append(sh, np.array(g['Shapes'].value))
+      #elif shapesupto > 0:
+      sh = np.append(sh, np.array(g['Shapes'].value)[:,:shapesupto])
+      g.close()
+    sh = np.reshape(sh,(len(t),shapesupto))
+    if len(np.unique(s))>1:
+      raise Warning('Data sets have different sampling rates')
+    A = spikeclass(loc)
+    A.LoadTimes(t)
+    A.SetSampling(s[0])
+    A.LoadShapes(sh.T)
+    return A, inds
 
 
 class spikeclass(object):
@@ -215,7 +252,7 @@ class spikeclass(object):
     def LoadTimes(self, times):
         assert np.size(np.shape(times)) == 1
         assert np.shape(times)[0] == self.NData()
-        self.__times = np.array(times)
+        self.__times = np.array(times, dtype=int)
 
     def SetSampling(self, s):
         self.__sampling = s
@@ -248,10 +285,31 @@ class spikeclass(object):
         stdout.flush()
 
     def ShapePCA(self,ncomp=None,white=False):
+        """Compute PCA projections of spike shapes.
+        If there are more than 1Mio data points, randomly sample 1Mio
+        shapes and compute PCA from this subset only. Projections are
+        then returned for all shapes.
+
+        Arguments:
+
+        ncomp -- the number of components to return
+        white -- Perform whitening of data if set to True"""
+
         print "Starting sklearn PCA...",
         stdout.flush()
         p = PCA(n_components=ncomp,whiten=white)
-        fit = p.fit_transform(self.Shapes().T).T
+        if self.NData()>1000000:
+          print str(self.NData())+" spikes, using 1Mio shapes randomly sampled...",
+          inds = np.random.choice(self.NData(),1000000,replace=False)
+          tf = p.fit(self.Shapes()[:,inds].T)
+          #tf = p.fit(self.Shapes()[:,:300000].T)
+          fit = np.zeros((ncomp,self.NData()))
+          # compute projections
+          for c in range(ncomp):
+            fit[c] = np.dot(tf.components_[c], self.Shapes())
+        else:
+          print "using all "+str(self.NData())+" shapes...",
+          fit = p.fit_transform(self.Shapes().T).T
         print "done."
         stdout.flush()
         return fit
@@ -262,7 +320,6 @@ class spikeclass(object):
           PrincComp = self.ShapePCA(n)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
-        print self.__data.shape, PrincComp.shape
         fourvector = np.vstack((self.__data,alpha*PrincComp))
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
