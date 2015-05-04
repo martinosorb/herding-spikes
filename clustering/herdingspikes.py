@@ -18,8 +18,7 @@ from sys import stdout
 
 def ImportInterpolated(filename,shapesupto=None):
     g=h5py.File(filename,'r')
-    A = spikeclass(0.5+np.array(g['Locations'].value,dtype=float).T)
-    print "Adding 0.5 to positions."
+    A = spikeclass(np.array(g['Locations'].value,dtype=float).T)
     A.LoadTimes(np.floor(g['Times'].value).astype(int))
     A.SetSampling(g['Sampling'].value)
     if shapesupto == None:
@@ -41,7 +40,7 @@ def ImportInterpolatedList(filenames,shapesupto=22):
     for i,f in enumerate(filenames):
       g = h5py.File(f,'r')
       print f
-      loc = np.append(loc, 0.5+g['Locations'].value.T, axis=1)
+      loc = np.append(loc, g['Locations'].value.T, axis=1)
       inds[i] = len(t) # store index of first spike
       t = np.append(t, np.floor(g['Times'].value).astype(int))
       s[i] = g['Sampling'].value
@@ -52,7 +51,7 @@ def ImportInterpolatedList(filenames,shapesupto=22):
       g.close()
     sh = np.reshape(sh,(len(t),shapesupto))
     if len(np.unique(s))>1:
-      raise Warning('Data sets have different sampling rates')
+      raise Warning('Data sets have different sampling rates\n'+str(s))
     A = spikeclass(loc)
     A.LoadTimes(t)
     A.SetSampling(s[0])
@@ -91,7 +90,7 @@ class spikeclass(object):
                 self.__times = np.array([])
                 self.__shapes = np.array([])
                 self.__colours = np.array([])
-                self.__sampling = 0
+                self.__sampling = []
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2,ndata): raise ValueError('Data must be a (2,N) array')
@@ -101,7 +100,7 @@ class spikeclass(object):
             self.__times = np.array([])
             self.__shapes = np.array([])
             self.__colours = np.array([])
-            self.__sampling = 0
+            self.__sampling = []
         else:
             raise ValueError('Can be initialised with 1 argument (the data set or a file) or 2 arguments (data, ClusterID)')
         self.Backup()
@@ -161,11 +160,11 @@ class spikeclass(object):
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio,12))
         ax = plt.subplot(121)
-        #ax.grid(which='major', axis='x', linewidth=1, linestyle='-', color='0.75')
-        #ax.grid(which='major', axis='y', linewidth=1, linestyle='-', color='0.75')
+        ax.grid(which='major', axis='x', linewidth=1, linestyle='-', color='0.75')
+        ax.grid(which='major', axis='y', linewidth=1, linestyle='-', color='0.75')
         ax.set_xlim(x1,x2)
         ax.set_ylim(y1,y2)
-        plt.scatter(self.__data[0],self.__data[1],marker='o',s=1,edgecolors='none',c=self.Colours()[self.__ClusterID])
+        plt.scatter(self.__data[0],self.__data[1],marker='o',s=3,edgecolors='none',c=self.Colours()[self.__ClusterID])
         ax.set_aspect('equal')
         plt.xticks(np.arange(np.round(x1),np.ceil(x2)))
         plt.yticks(np.arange(np.round(y1),np.ceil(y2)))
@@ -229,6 +228,7 @@ class spikeclass(object):
 
     def ClusterLoc(self):
         """Returns an array containing the locations of the cluster centres."""
+        print self.__c
         return np.array(self.__c)
 
     def ClusterSizes(self):
@@ -254,7 +254,7 @@ class spikeclass(object):
 
     def Save(self,string):
         """Saves data, cluster centres and ClusterIDs to a hdf5 file."""
-        g=h5py.File(string,'w-')
+        g=h5py.File(string+'.hdf5','w-')
         g.create_dataset("data",data=self.__data)
         if self.__c != np.array([]):
             g.create_dataset("centres",data=self.__c)
@@ -264,8 +264,6 @@ class spikeclass(object):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
             g.create_dataset("shapes",data=self.__shapes)
-        if self.__sampling != 0:
-            g.create_dataset("Sampling",data=self.__sampling)
         g.close()
 
     def MeanShift(self,h):
@@ -276,6 +274,7 @@ class spikeclass(object):
         MS.fit_predict(self.__data.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
+        print self.__c
         print "done."
         stdout.flush()
 
@@ -309,10 +308,10 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self,h,alpha,n=1,PrincComp=[]):
+    def CombinedMeanShift(self,h,alpha,PrincComp=[]):
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0)
         if not PrincComp.any():
-          PrincComp = self.ShapePCA(n)
+          PrincComp = self.ShapePCA(1)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         fourvector = np.vstack((self.__data,alpha*PrincComp))
@@ -435,7 +434,51 @@ class spikeclass(object):
         print('Crop removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
+    def Classify(self,nbins = [40,40],threshold = 5):
+        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
+        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
+        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
+        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
+        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+        ind = np.where(hist[nbx,nby]<=threshold)[0]
+        print "Based on "+str(len(ind))+" examples of bad shapes."
+        normalise = lambda X: X/np.max(np.abs(X),axis=0)
+        badshape = np.mean(normalise(self.Shapes()),axis=1)
+        score = np.dot(badshape,self.Shapes())
+        scorePCA = self.ShapePCA(ncomp=1)[0]
+        return score,scorePCA
 
+    def CreateClassifier(self, nbins = [60,60], densitythreshold = 100, ampthreshold = 7):
+        """ Creates a classifier to distinguish between noise and true spike shapes.
+        This is based on the assumption that areas with very low spike density contain noise.
+
+        Arguments:
+        nbins -- Array with the number of bins in x and y to evaluate spike density.
+        densitythreshold -- Bins with fewer spikes are assumed noise.
+        ampthreshold -- Spikes with at least this amplitdue are assumed true spikes.
+
+        Returns:
+        classifier -- The difference between shapes of true spikes and noise.
+        badshape -- The average shape of a noise event.
+        goodshape -- The average shape of a true spike.
+        """
+
+        hg,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
+        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
+        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
+        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
+        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+        ind = np.where(hg[nbx,nby]<=densitythreshold)[0]
+        nBad = len(ind)
+        print "Classifier is based on "+str(len(ind))+" examples of bad shapes."
+        normalise = lambda X: X/np.max(np.abs(X),axis=0)
+        badshape = np.median(normalise(self.Shapes()[:,ind]),axis=1)
+        fakeampl = np.max(np.abs(self.Shapes()),axis=0)
+        ind = np.where(fakeampl>ampthreshold)[0]
+        print "and "+str(len(ind))+" examples of good shapes."
+        goodshape = np.median(normalise(self.Shapes()[:,ind]),axis=1)
+        classifier = .5*(goodshape-badshape)
+        return classifier, badshape, goodshape
 
 
 
