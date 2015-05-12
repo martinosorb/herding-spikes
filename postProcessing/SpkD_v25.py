@@ -826,7 +826,7 @@ def MergeForwardBackward(HdfFileForward, HdfFileBackward, HdfOutput, IncludeLong
 				Dspikes[i]=True
 	else:
 		Dspikes=np.zeros(len(Times),dtype=bool)
-		Ispikes=RepolarizingSpikes.copy()
+		Ispikes=RepolarizingSpikes0.copy()
 		RepolarizingInd=np.nonzero(RepolarizingSpikes0)[0]
 		for i in range(500):
 			k=RepolarizingInd[i]
