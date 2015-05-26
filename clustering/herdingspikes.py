@@ -194,6 +194,7 @@ class spikeclass(object):
         plt.xlim((-.5,11.5))
         plt.yticks([])
         plt.xticks(np.arange(np.min((len(clusters),12))))
+        ax.set_xticklabels(clusters)
         plt.xlabel('Cluster ID')
         plt.grid(0)
         if save != None:
@@ -228,7 +229,6 @@ class spikeclass(object):
 
     def ClusterLoc(self):
         """Returns an array containing the locations of the cluster centres."""
-        print self.__c
         return np.array(self.__c)
 
     def ClusterSizes(self):
@@ -317,7 +317,7 @@ class spikeclass(object):
         fourvector = np.vstack((self.__data,alpha*PrincComp))
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
-        self.__c = MS.cluster_centers_.T[0:1]
+        self.__c = MS.cluster_centers_.T #[0:1]
         print "done."
         stdout.flush()
 
@@ -480,7 +480,25 @@ class spikeclass(object):
         classifier = .5*(goodshape-badshape)
         return classifier, badshape, goodshape
 
+    def ClusterWidth(self):
+        """Compute the spread of spikes within each cluster. This can be
+        used to distinguish well centred clusters from those where spike
+        locations were poorly mapped.
 
+        Note this method uses the cluster centre locations returned by
+        the mean shift algorithm, which differ from the centre of mass
+        if PCA is used alonside position.
+
+        Returns:
+        clwidth -- The standard deviation of the spike locations relative to the cluster centre.
+        """
+
+        clwidth = np.zeros(self.NClusters())
+        for n in range(self.NClusters()):
+          centre = self.ClusterLoc()[:2,n]
+          inds = self.__ClusterID==n
+          clwidth[n] = np.std(np.sqrt((self.__data[0,inds]-centre[0])**2+(self.__data[1,inds]-centre[1])**2))
+        return clwidth
 
 
 
