@@ -6,7 +6,7 @@ Created on Tue Sep 23 11:17:38 2014
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.cluster import MeanShift
+from par_mean_shift_ import MeanShift
 from sklearn.decomposition import PCA
 from sklearn.decomposition import RandomizedPCA
 from sklearn.decomposition import KernelPCA
