@@ -78,7 +78,7 @@ class spikeclass(object):
                 self.__times = np.array(g['times']) if 'times' in g.keys() else np.array([])
                 self.__shapes = np.array(g['shapes']) if 'shapes' in g.keys() else np.array([])
                 self.__colours = np.array([])
-                self.__sampling = g['Sampling'].value
+                self.__sampling = g['Sampling'].value if 'Sampling' in g.keys() else np.array([])
                 g.close()
             else:
                 givendata = args[0]
