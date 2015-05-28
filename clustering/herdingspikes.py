@@ -268,10 +268,10 @@ class spikeclass(object):
 
     def MeanShift(self,h):
         """Performs the scikit-learn Mean Shift clustering. kwargs are passed to the MeanShift class."""
-        MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0)
+        MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0, n_jobs=-1)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
-        MS.fit_predict(self.__data.T)
+        MS.fit(self.__data.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
         print self.__c
@@ -309,13 +309,13 @@ class spikeclass(object):
         return fit
 
     def CombinedMeanShift(self,h,alpha,PrincComp=[]):
-        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0)
+        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0,n_jobs=-1)
         if not PrincComp.any():
           PrincComp = self.ShapePCA(1)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         fourvector = np.vstack((self.__data,alpha*PrincComp))
-        MS.fit_predict(fourvector.T)
+        MS.fit(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T #[0:1]
         print "done."
