@@ -6,11 +6,10 @@ Created on Tue Sep 23 11:17:38 2014
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from par_mean_shift_ import MeanShift
+from ms_new_withmp import MeanShift
 from sklearn.decomposition import PCA
-from sklearn.decomposition import RandomizedPCA
-from sklearn.decomposition import KernelPCA
 from scipy.stats import itemfreq
+from multiprocessing import cpu_count
 import h5py
 import warnings
 from sys import stdout
@@ -266,12 +265,12 @@ class spikeclass(object):
             g.create_dataset("shapes",data=self.__shapes)
         g.close()
 
-    def MeanShift(self,h):
+    def MeanShift(self,h,njobs=cpu_count()):
         """Performs the scikit-learn Mean Shift clustering. kwargs are passed to the MeanShift class."""
-        MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0, n_jobs=-1)
+        MS = MeanShift(bin_seeding=True,bandwidth=h, cluster_all=True, min_bin_freq=0, n_jobs=njobs)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
-        MS.fit(self.__data.T)
+        MS.fit_predict(self.__data.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
         print self.__c
@@ -308,14 +307,14 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self,h,alpha,PrincComp=[]):
-        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0,n_jobs=-1)
+    def CombinedMeanShift(self,h,alpha,PrincComp=[],njobs=cpu_count()):
+        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True, min_bin_freq=0,n_jobs=njobs)
         if not PrincComp.any():
           PrincComp = self.ShapePCA(1)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         fourvector = np.vstack((self.__data,alpha*PrincComp))
-        MS.fit(fourvector.T)
+        MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T #[0:1]
         print "done."
