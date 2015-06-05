@@ -264,7 +264,7 @@ class spikeclass(object):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
             g.create_dataset("shapes",data=self.__shapes,compression=comprehension)
-        if self.__sampling != np.array([]):
+        if self.__sampling:
             g.create_dataset("Sampling",data=self.__sampling)
         g.close()
 
