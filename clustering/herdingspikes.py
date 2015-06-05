@@ -251,8 +251,9 @@ class spikeclass(object):
     def SetSampling(self, s):
         self.__sampling = s
 
-    def Save(self,string):
-        """Saves data, cluster centres and ClusterIDs to a hdf5 file."""
+    def Save(self,string,compression=''):
+        """Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers compression of the shapes, 'lzf'
+        appears a good trade-off between speed and performance.'"""
         g=h5py.File(string+'.hdf5','w-')
         g.create_dataset("data",data=self.__data)
         if self.__c != np.array([]):
@@ -262,7 +263,9 @@ class spikeclass(object):
         if self.__times != np.array([]):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
-            g.create_dataset("shapes",data=self.__shapes)
+            g.create_dataset("shapes",data=self.__shapes,compression=comprehension)
+        if self.__sampling != np.array([]):
+            g.create_dataset("Sampling",data=self.__sampling)
         g.close()
 
     def MeanShift(self,h,njobs=cpu_count()):
