@@ -149,7 +149,7 @@ class spikeclass(object):
         ax.set_xlim([min(self.__data[0]),max(self.__data[0])])
         ax.set_ylim([min(self.__data[1]),max(self.__data[1])])
 
-    def PartPlot(self,[x1,x2,y1,y2],save=None):
+    def PartPlot(self,(x1,x2,y1,y2),save=None):
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio,12))
         ax = plt.subplot(121)
@@ -407,7 +407,7 @@ class spikeclass(object):
         print('FilterSmallClusters removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
-    def CropClusters(self,[xmin,xmax,ymin,ymax],outside=False):
+    def CropClusters(self,(xmin,xmax,ymin,ymax),outside=False):
         """Keeps only datapoints belonging to clusters whose centres are inside the relevant window, or outside, if outside=True is passed."""
         self.Backup()
         numclus = self.NClusters()
@@ -431,7 +431,7 @@ class spikeclass(object):
         print('CropClusters removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
-    def Crop(self,[xmin,xmax,ymin,ymax],outside=False):
+    def Crop(self,(xmin,xmax,ymin,ymax),outside=False):
         """Keeps only datapoints inside the relevant window, or outside, if outside=True is passed."""
         self.Backup()
         dx,dy = self.__data
