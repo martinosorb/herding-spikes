@@ -3,6 +3,7 @@
 Created on Tue Sep 23 11:17:38 2014
 
 @author: Martino Sorbaro
+@author: Matthias Hennig
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,6 +26,7 @@ def ImportInterpolated(filename,shapesupto=None):
     elif shapesupto > 0:
         A.LoadShapes(np.array(g['Shapes'].value).T[:shapesupto])
     g.close()
+    A.__expinds = np.array([0])
     return A
 
 def ImportInterpolatedList(filenames,shapesupto=22):
@@ -55,7 +57,8 @@ def ImportInterpolatedList(filenames,shapesupto=22):
     A.LoadTimes(t)
     A.SetSampling(s[0])
     A.LoadShapes(sh.T)
-    return A, inds
+    A.__expinds = inds
+    return A
 
 
 class spikeclass(object):
@@ -78,6 +81,7 @@ class spikeclass(object):
                 self.__shapes = np.array(g['shapes']) if 'shapes' in g.keys() else np.array([])
                 self.__colours = np.array([])
                 self.__sampling = g['Sampling'].value if 'Sampling' in g.keys() else np.array([])
+                self.__expinds = g['expinds'] if 'expinds' in g.keys() else np.array([0])
                 g.close()
             else:
                 givendata = args[0]
@@ -90,6 +94,7 @@ class spikeclass(object):
                 self.__shapes = np.array([])
                 self.__colours = np.array([])
                 self.__sampling = []
+                self.__expinds = g['expinds'] if 'expinds' in g.keys() else np.array([0])
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2,ndata): raise ValueError('Data must be a (2,N) array')
@@ -100,6 +105,7 @@ class spikeclass(object):
             self.__shapes = np.array([])
             self.__colours = np.array([])
             self.__sampling = []
+            self.__expinds = g['expinds'] if 'expinds' in g.keys() else np.array([0])
         else:
             raise ValueError('Can be initialised with 1 argument (the data set or a file) or 2 arguments (data, ClusterID)')
         self.Backup()
@@ -108,7 +114,6 @@ class spikeclass(object):
     def Backup(self):
         """Creates a checkpoint, to be used for a subsequent call to UndoLast()"""
         self.__backup = {0:self.__data,1:self.__ClusterID,2:self.__c,3:self.__shapes,4:self.__times}
-
 
     def UndoLast(self):
         """The object restores the data as it was before the last call of a filter, or Backup()."""
@@ -122,7 +127,7 @@ class spikeclass(object):
         return self.__colours
 
     def LogHistPlot(self,save=None):
-        """Plots a density histogram. This does not work with the current data, but with data loaded by the most recent class constructor call."""
+        """Plots a density histogram."""
         #fig,ax = plt.subplots()
         #ax.imshow(np.log10(self.__hist),origin='lower',interpolation='none')
         #plt.show()
@@ -152,10 +157,7 @@ class spikeclass(object):
         ax.set_xlim([min(self.__data[0]),max(self.__data[0])])
         ax.set_ylim([min(self.__data[1]),max(self.__data[1])])
 
-    def PartPlot(self,window,save=None):
-        PartPlot(self,window[0],window[1],window[2],window[3],save)
-
-    def PartPlot(self,x1,x2,y1,y2,save=None):
+    def PartPlot(self,[x1,x2,y1,y2],save=None):
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio,12))
         ax = plt.subplot(121)
@@ -254,7 +256,7 @@ class spikeclass(object):
     def Save(self,string,compression=''):
         """Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers compression of the shapes, 'lzf'
         appears a good trade-off between speed and performance.'"""
-        g=h5py.File(string+'.hdf5','w-')
+        g=h5py.File(string,'w')
         g.create_dataset("data",data=self.__data)
         if self.__c != np.array([]):
             g.create_dataset("centres",data=self.__c)
@@ -263,7 +265,7 @@ class spikeclass(object):
         if self.__times != np.array([]):
             g.create_dataset("times",data=self.__times)
         if self.__shapes != np.array([]):
-            g.create_dataset("shapes",data=self.__shapes,compression=comprehension)
+            g.create_dataset("shapes",data=self.__shapes,compression=compression)
         if self.__sampling:
             g.create_dataset("Sampling",data=self.__sampling)
         g.close()
@@ -379,6 +381,15 @@ class spikeclass(object):
         print('FilterSmallClusters removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
+    def ExperimentIndices(self):
+        return self.__expinds
+
+    def UpdateExperimentIndices(self,myInds):
+        if len(self.__expinds)>1:
+            for n,i in enumerate(self.__expinds[1:]):
+                self.__expinds[n+1] = np.where(myInds>=i)[0][0]
+            print 'New experiment indices: '+str(self.__expinds)
+
     def KeepOnly(self,ind_kept):
         #does not act on clusters!
         self.__data = self.__data[:,ind_kept]
@@ -386,15 +397,16 @@ class spikeclass(object):
             self.__shapes = self.__shapes[:,ind_kept]
         if np.size(self.__times):
             self.__times = self.__times[ind_kept]
+        self.UpdateExperimentIndices(ind_kept)
 
-    def CropClusters(self,xmin,xmax,ymin,ymax,keepinside=True):
-        """Removes all datapoints belonging to clusters centered outside the specified area."""
+    def CropClusters(self,[xmin,xmax,ymin,ymax],outside=False):
+        """Keeps only datapoints belonging to clusters whose centres are inside the relevant window, or outside, if outside=True is passed."""
         self.Backup()
         numclus = self.NClusters()
         initialdata = self.NData()
         cx,cy = self.__c
         #create a conversion table to get rid of gaps in cluster IDs
-        if keepinside:
+        if not outside:
             condition = [ x&y&z&w for (x,y,z,w) in zip(cx<=xmax,cx>=xmin,cy<=ymax,cy>=ymin)]
         else:
             condition = [ -(x&y&z&w) for (x,y,z,w) in zip(cx<=xmax,cx>=xmin,cy<=ymax,cy>=ymin)]
@@ -411,13 +423,13 @@ class spikeclass(object):
         print('CropClusters removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
-    def Crop(self,xmin,xmax,ymin,ymax,keepinside=True):
-        # TO BE TESTED
+    def Crop(self,[xmin,xmax,ymin,ymax],outside=False):
+        """Keeps only datapoints inside the relevant window, or outside, if outside=True is passed."""
         self.Backup()
         dx,dy = self.__data
         numclus = self.NClusters()
         initialdata = self.NData()
-        if keepinside:
+        if not outside:
             condition = [ x&y&z&w for (x,y,z,w) in zip(dx<=xmax,dx>=xmin,dy<=ymax,dy>=ymin)]
         else:
             condition = [ -x&y&z&w for (x,y,z,w) in zip(dx<=xmax,dx>=xmin,dy<=ymax,dy>=ymin)]
@@ -436,19 +448,19 @@ class spikeclass(object):
         print('Crop removed '+str(numclus-self.NClusters())+' clusters and '+str(initialdata-self.NData())+' datapoints.')
         return d_ind_kept
 
-    def Classify(self,nbins = [40,40],threshold = 5):
-        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
-        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
-        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
-        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
-        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
-        ind = np.where(hist[nbx,nby]<=threshold)[0]
-        print "Based on "+str(len(ind))+" examples of bad shapes."
-        normalise = lambda X: X/np.max(np.abs(X),axis=0)
-        badshape = np.mean(normalise(self.Shapes()),axis=1)
-        score = np.dot(badshape,self.Shapes())
-        scorePCA = self.ShapePCA(ncomp=1)[0]
-        return score,scorePCA
+#    def Classify(self,nbins = [40,40],threshold = 5):
+#        hist,bx,by = np.histogram2d(self.__data[0],self.__data[1],nbins)
+#        binspanx = (np.max(self.__data[0])-np.min(self.__data[0]))/nbins[0]*1.001
+#        binspany = (np.max(self.__data[1])-np.min(self.__data[1]))/nbins[1]*1.001
+#        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
+#        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+#        ind = np.where(hist[nbx,nby]<=threshold)[0]
+#        print "Based on "+str(len(ind))+" examples of bad shapes."
+#        normalise = lambda X: X/np.max(np.abs(X),axis=0)
+#        badshape = np.mean(normalise(self.Shapes()),axis=1)
+#        score = np.dot(badshape,self.Shapes())
+#        scorePCA = self.ShapePCA(ncomp=1)[0]
+#        return score,scorePCA
 
     def CreateClassifier(self, nbins = [60,60], densitythreshold = 100, ampthreshold = 7):
         """ Creates a classifier to distinguish between noise and true spike shapes.
