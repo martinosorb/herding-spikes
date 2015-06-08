@@ -26,7 +26,7 @@ def ImportInterpolated(filename,shapesupto=None):
     elif shapesupto > 0:
         A.LoadShapes(np.array(g['Shapes'].value).T[:shapesupto])
     g.close()
-    A.__expinds = np.array([0])
+    A._spikeclass__expinds = np.array([0])
     return A
 
 def ImportInterpolatedList(filenames,shapesupto=22):
@@ -57,7 +57,7 @@ def ImportInterpolatedList(filenames,shapesupto=22):
     A.LoadTimes(t)
     A.SetSampling(s[0])
     A.LoadShapes(sh.T)
-    A.__expinds = inds
+    A._spikeclass__expinds = inds
     return A
 
 class spikeclass(object):
@@ -256,14 +256,14 @@ class spikeclass(object):
             raise ValueError('There are only '+len(self.__indices)+' datasets.')
         return arange(self.__expinds[i],self.__expinds[i+1])
 
-    def ClusterIndices(self,n,dataset=None):
+    def ClusterIndices(self,n,exper=None):
     # TO BE TESTED
         idx = np.where(self.__ClusterID==n)[0]
-        if dataset is not None:
-            if dataset+1<len(self.__indices):
+        if exper is not None:
+            if exper+1<len(self.__indices):
                 endind = self.__expinds[i+1]
                 startind = self.__expinds[i]
-            elif dataset+1==len(self.__indices):
+            elif exper+1==len(self.__indices):
                 endind = self.NData()
                 startind = self.__expinds[i]
             else:
@@ -272,6 +272,8 @@ class spikeclass(object):
             idx = idx[idx<endind]
         return idx
 
+    def ExperimentHeads(self):
+        return self.__expinds
 
 ### SAVE
 
