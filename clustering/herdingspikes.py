@@ -327,11 +327,8 @@ class spikeclass(object):
           print str(self.NData())+" spikes, using 1Mio shapes randomly sampled...",
           inds = np.random.choice(self.NData(),1000000,replace=False)
           tf = p.fit(self.Shapes()[:,inds].T)
-          #tf = p.fit(self.Shapes()[:,:300000].T)
-          fit = np.zeros((ncomp,self.NData()))
           # compute projections
-          for c in range(ncomp):
-            fit[c] = np.dot(tf.components_[c], self.Shapes())
+          fit = p.transform(self.Shapes().T).T
         else:
           print "using all "+str(self.NData())+" shapes...",
           fit = p.fit_transform(self.Shapes().T).T
