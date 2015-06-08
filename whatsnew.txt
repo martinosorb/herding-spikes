@@ -1,0 +1,15 @@
+
+=============================
+Martino 8/Jun/2015
+
+The class has a variable __expinds that stores the first indices of every experiment.
+This has a get method ExperimentHeads().
+ExperimentIndices() returns all the indices corresponding to that experiment.
+
+ClusterIndices(n,exper=None) is useful to avoid all the np.where's: returns all the indices corresponding to spikes in the nth cluster. If exper is not None then also returns only the indices belonging to a particular dataset (0,1,...).
+
+PartPlot, Crop and CropCluster now accept a tuple (xmin,xmax,ymin,ymax) instead of the four arguments separately.
+
+Tidied up in general, changed order of some methods and some names.
+
+Changed "comprehension" to "compression" in "Save", I believe this was a mistake.
