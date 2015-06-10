@@ -1,3 +1,7 @@
+=============================
+Martino 10/Jun/2015
+
+Corrected bug in Save. Now compression defaults to None (previously '').
 
 =============================
 Martino 8/Jun/2015
