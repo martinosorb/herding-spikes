@@ -277,7 +277,7 @@ class spikeclass(object):
 
 ### SAVE
 
-    def Save(self,string,compression=''):
+    def Save(self,string,compression=None):
         """Saves data, cluster centres and ClusterIDs to a hdf5 file. Offers compression of the shapes, 'lzf'
         appears a good trade-off between speed and performance.'"""
         g=h5py.File(string,'w')
