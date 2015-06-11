@@ -439,7 +439,7 @@ class spikeclass(object):
         if not outside:
             condition = [ x&y&z&w for (x,y,z,w) in zip(dx<=xmax,dx>=xmin,dy<=ymax,dy>=ymin)]
         else:
-            condition = [ -x&y&z&w for (x,y,z,w) in zip(dx<=xmax,dx>=xmin,dy<=ymax,dy>=ymin)]
+            condition = [ -(x&y&z&w) for (x,y,z,w) in zip(dx<=xmax,dx>=xmin,dy<=ymax,dy>=ymin)]
         d_ind_kept = np.where(condition)[0]
         if numclus:
             cid_kept_all = self.__ClusterID[d_ind_kept]
