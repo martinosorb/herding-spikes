@@ -17,6 +17,7 @@ from sys import stdout
 
 
 def ImportInterpolated(filename, shapesupto=None):
+    """Helper function to read spike data from an hdf5 file."""
     g = h5py.File(filename, 'r')
     A = spikeclass(np.array(g['Locations'].value, dtype=float).T)
     A.LoadTimes(np.floor(g['Times'].value).astype(int))
@@ -32,7 +33,8 @@ def ImportInterpolated(filename, shapesupto=None):
 
 def ImportInterpolatedList(filenames, shapesupto=22):
     """ Helper function to read in spike data from a list of hdf5 files.
-    Returns a class object and the indices where each file begins.
+    Returns a class object which keeps track of the
+    indices where each file begins.
     """
     loc = np.array([[], []], dtype=float)
     t = np.array([], dtype=int)
@@ -156,7 +158,7 @@ class spikeclass(object):
         if save is not None:
             plt.savefig(save)
 
-    def DataPlot(self):
+    def DataPlot(self, save=None):
         """Plots the current data. If clustering was performed,
          the cluster centres and ID (colour) are plotted,
          otherwise a black and white scatterplot is plotted"""
@@ -172,8 +174,11 @@ class spikeclass(object):
         ax.set_aspect('equal')
         ax.set_xlim([min(self.__data[0]), max(self.__data[0])])
         ax.set_ylim([min(self.__data[1]), max(self.__data[1])])
+        if save is not None:
+            plt.savefig(save)
 
     def PartPlot(self, (x1, x2, y1, y2), save=None):
+        """Plots a portion of the space. Doesn't work prior to clustering."""
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio, 12))
         ax = plt.subplot(121)
@@ -193,6 +198,7 @@ class spikeclass(object):
             plt.savefig(save)
 
     def ShapesPlot(self, clusters=None, save=None):
+        """Plots the shapes of up to 12 clusters."""
         if clusters is None:
             clusters = range(self.NClusters())
         if len(clusters) > 12:
@@ -269,16 +275,20 @@ class spikeclass(object):
         return self.__sampling
 
     def LoadShapes(self, shapes):
+        """Loads a KxN array, where K is the length of a single wave
+        and N is the number of spikes, in the shapes vector."""
         assert np.size(np.shape(shapes)) == 2
         assert np.shape(shapes)[1] == self.NData()
         self.__shapes = np.array(shapes)
 
     def LoadTimes(self, times):
+        """Loads a vector of spike times."""
         assert np.size(np.shape(times)) == 1
         assert np.shape(times)[0] == self.NData()
         self.__times = np.array(times, dtype=int)
 
     def SetSampling(self, s):
+        """Sets the value of the sampling rate for internal usage."""
         self.__sampling = s
 
     def ExperimentIndices(self, i):
@@ -379,6 +389,16 @@ class spikeclass(object):
         return fit
 
     def CombinedMeanShift(self, h, alpha, PrincComp=[], njobs=cpu_count()):
+        """Performs the scikit-learn Mean Shift clustering.
+        kwargs are passed to the MeanShift class.
+
+        Arguments:
+
+        h -- the bandwidth
+        alpha -- the weight of the principal components as compared
+        to the spatial data.
+        PrincComp -- used to pass already-computed principal components
+        njobs -- the number of processes to be used (default: cpu_count())"""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
                        min_bin_freq=0, n_jobs=njobs)
         if not PrincComp.any():
@@ -522,12 +542,17 @@ class spikeclass(object):
 # UTILITY
 
     def UpdateExperimentIndices(self, myInds):
+        """This is used when applying a filter, to keep track
+        of the indices at which new stimulation protocols begin"""
         if len(self.__expinds) > 1:
             for n, i in enumerate(self.__expinds[1:]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
             print 'New experiment indices: '+str(self.__expinds)
 
     def KeepOnly(self, ind_kept):
+        """This is used to remove datapoints that were filtered out
+        and update the arrays. When the data are clustered, more
+        updates need to be done"""
         # does not act on clusters!
         self.__data = self.__data[:, ind_kept]
         if np.size(self.__shapes):
