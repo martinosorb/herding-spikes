@@ -409,7 +409,7 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self, h, alpha, PrincComp=[], njobs=cpu_count()):
+    def CombinedMeanShift(self, h, alpha, PrincComp=None, njobs=cpu_count()):
         """Performs the scikit-learn Mean Shift clustering.
         kwargs are passed to the MeanShift class.
 
@@ -422,8 +422,8 @@ class spikeclass(object):
         njobs -- the number of processes to be used (default: cpu_count())"""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
                        min_bin_freq=0, n_jobs=njobs)
-        if not PrincComp.any():
-            PrincComp = self.ShapePCA(1)
+        if PrincComp is None:
+            PrincComp = self.ShapePCA(2)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         fourvector = np.vstack((self.__data, alpha*PrincComp))
