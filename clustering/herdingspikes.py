@@ -39,23 +39,24 @@ def ImportInterpolatedList(filenames, shapesupto=22):
     loc = np.array([[], []], dtype=float)
     t = np.array([], dtype=int)
     sh = np.array([], dtype=int)
-    inds = np.zeros(len(filenames), dtype=int)
+    inds = np.zeros(len(filenames)+1,dtype=int)
     s = np.zeros(len(filenames))
-    for i, f in enumerate(filenames):
-        g = h5py.File(f, 'r')
-        print f
-        loc = np.append(loc, g['Locations'].value.T, axis=1)
-        inds[i] = len(t)  # store index of first spike
-        t = np.append(t, np.floor(g['Times'].value).astype(int))
-        s[i] = g['Sampling'].value
-        # if shapesupto == None:
-        #  sh = np.append(sh, np.array(g['Shapes'].value))
-        # elif shapesupto > 0:
-        sh = np.append(sh, np.array(g['Shapes'].value)[:, :shapesupto])
-        g.close()
-    sh = np.reshape(sh, (len(t), shapesupto))
-    if len(np.unique(s)) > 1:
-        raise Warning('Data sets have different sampling rates\n'+str(s))
+    for i,f in enumerate(filenames):
+      g = h5py.File(f,'r')
+      print f
+      loc = np.append(loc, g['Locations'].value.T, axis=1)
+      inds[i] = len(t) # store index of first spike
+      t = np.append(t, np.floor(g['Times'].value).astype(int))
+      s[i] = g['Sampling'].value
+      #if shapesupto == None:
+      #  sh = np.append(sh, np.array(g['Shapes'].value))
+      #elif shapesupto > 0:
+      sh = np.append(sh, np.array(g['Shapes'].value)[:,:shapesupto])
+      g.close()
+    inds[len(filenames)] = len(t)
+    sh = np.reshape(sh,(len(t),shapesupto))
+    if len(np.unique(s))>1:
+      raise Warning('Data sets have different sampling rates\n'+str(s))
     A = spikeclass(loc)
     A.LoadTimes(t)
     A.SetSampling(s[0])
@@ -292,14 +293,16 @@ class spikeclass(object):
         self.__sampling = s
 
     def ExperimentIndices(self, i):
-        if i+1 < len(self.__indices):
+        """Returns a pair of indices denoting the start and end of an experiment.
+        Can currently only be used if data from multiple experiments is read
+        with the helper function ImportInterpolatedList. """
+        if i+1 < len(self.__expinds):
             final = self.__expinds[i+1]
-        elif i+1 == len(self.__indices):
+        elif i+1 == len(self.__expinds):
             final = self.NData()
         else:
-            raise ValueError('There are only '
-                             + len(self.__indices) + ' datasets.')
-        return arange(self.__expinds[i], self.__expinds[i+1])
+            raise ValueError('There are only ' + len(self.__expinds) + ' datasets.')
+        return np.arange(self.__expinds[i], self.__expinds[i+1])
 
     def ClusterIndices(self, n, exper=None):
         # TO BE TESTED
@@ -359,6 +362,23 @@ class spikeclass(object):
         print self.__c
         print "done."
         stdout.flush()
+
+
+    def AlignShapes(self):
+        # Todo: optimise!
+        """Re-aligns the peaks of the spike shapes. This can reduce spurious
+        clustering at low sampling rates. Note the original shapes are overwritten,
+        and the resulting array is zero-padded at the start and end."""
+        peaks = np.argmin(self.Shapes(), axis=0)
+        ap = int(np.median(peaks))
+        peaks = -np.argmin(self.Shapes()[ap-2:ap+2], axis=0) + 1
+        alShapes = np.insert(
+            self.Shapes(), 
+            [0, 0, self.Shapes().shape[0], self.Shapes().shape[0]],
+            0, axis=0)
+        for i in range(alShapes.shape[1]):
+            alShapes[:, i] = np.roll(alShapes[:, i], peaks[i])
+        self.LoadShapes(alShapes)
 
     def ShapePCA(self, ncomp=None, white=False):
         """Compute PCA projections of spike shapes.
