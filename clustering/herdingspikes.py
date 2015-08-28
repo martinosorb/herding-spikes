@@ -354,7 +354,7 @@ class spikeclass(object):
         """Performs the scikit-learn Mean Shift clustering.
         kwargs are passed to the MeanShift class."""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
-                       min_bin_freq=0, n_jobs=njobs)
+                       min_bin_freq=1, n_jobs=njobs)
         print "Starting sklearn Mean Shift... ",
         stdout.flush()
         MS.fit_predict(self.__data.T)
@@ -422,7 +422,7 @@ class spikeclass(object):
         PrincComp -- used to pass already-computed principal components
         njobs -- the number of processes to be used (default: cpu_count())"""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
-                       min_bin_freq=0, n_jobs=njobs)
+                       min_bin_freq=1, n_jobs=njobs)
         if PrincComp is None:
             PrincComp = self.ShapePCA(2)
         print "Starting sklearn Mean Shift... ",
