@@ -497,7 +497,7 @@ class spikeclass(object):
         self.__ClusterID = self.__ClusterID[d_ind_kept]
         self.__c = self.__c[:, c_ind_kept]
         print('FilterSmallClusters removed '+str(numclus-self.NClusters()) +
-              ' clusters and '  str(initialdata-self.NData()) +
+              ' clusters and ' + str(initialdata-self.NData()) +
               ' datapoints.')
         return d_ind_kept
 
