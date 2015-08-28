@@ -377,8 +377,9 @@ class spikeclass(object):
             self.Shapes(),
             [0, 0, self.Shapes().shape[0], self.Shapes().shape[0]],
             0, axis=0)
-        for i in range(alShapes.shape[1]):
-            alShapes[:, i] = np.roll(alShapes[:, i], peaks[i])
+        for d in np.arange(-2,2):
+            idxd = peaks == d
+            alShapes[:,idxd] = np.roll(alShapes[:,idxd],d,axis=0)    
         self.LoadShapes(alShapes)
 
     def ShapePCA(self, ncomp=None, white=False):
