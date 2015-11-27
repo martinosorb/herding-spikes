@@ -1,7 +1,7 @@
 # Herding Spikes
 Software for high density multi-electrode array recordings.
 
-## Sub-rojects
+## Sub-projects
 
  - [onlineDetection](onlineDetection): Online-capable spike detection, done independently on each recording channel.
  - [interpolatingDetection](interpolatingDetection): Spike detection with spatial interpolation. Returns cut-outs for detected events from multiple channels, which allows performing spike localisation.
