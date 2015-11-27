@@ -1,4 +1,4 @@
-# Online spike detection
+# Interpolating spike detection
 
 Developed and written by [Oliver Muthmann](ollimuh@googlemail.com).
 
@@ -14,8 +14,6 @@ Note this implementation is currently only compatible with the old .brw file for
 
 ## Implementation
 
-The online detection will produce a single text file containing (integers arranged in three columns) channel ids, time stamps (in units of frames) and amplitudes (in units of v/64).
+The interpolating detection creates 6 output files, one of which contains parameters used (_info.txt), one for global voltage fluctuations (_avg.txt), two files for spikes (real (_spikes.txt) and virtual (_spikesX.txt) channels) and two files for cut-outs (_shapes.txt,_shapesX.txt). It is not required to set a minimum width and averaged amplitude for spikes here, as the detection uses averages over 3 frames. Additionally, the trigger for recalibrations of the electrodes can be recorded if provided, to remove potential artifacts.
 
-Some parameters can be adjusted by the experimenter. The repolarization threshold ensures that the measured voltage goes back towards baseline. At least one frame during the maximum width of the spike should be larger than that value. Note, however, that this can be strongly distorted by noise and therefore one should not use a high value here.
-
-The output from the spike detection is then read and processed by the PYTHON tools provided in [postProcessing](../postProcessing).
+The output is then read and processed by the PYTHON tools provided in [postProcessing](../postProcessing).
