@@ -410,9 +410,8 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self, h, alpha, PrincComp=None, njobs=cpu_count()):
+    def CombinedMeanShift(self, h, alpha, PrincComp=None, njobs=cpu_count(), mbf=1):
         """Performs the scikit-learn Mean Shift clustering.
-        kwargs are passed to the MeanShift class.
 
         Arguments:
 
@@ -420,9 +419,10 @@ class spikeclass(object):
         alpha -- the weight of the principal components as compared
         to the spatial data.
         PrincComp -- used to pass already-computed principal components
-        njobs -- the number of processes to be used (default: cpu_count())"""
+        njobs -- the number of processes to be used (default: cpu_count())
+        mbf -- the minimum number of items in a seed"""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
-                       min_bin_freq=1, n_jobs=njobs)
+                       min_bin_freq=mbf, n_jobs=njobs)
         if PrincComp is None:
             PrincComp = self.ShapePCA(2)
         print "Starting sklearn Mean Shift... ",
