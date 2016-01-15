@@ -673,7 +673,7 @@ namespace SpkDslowFilter {
 			tQmm = (tQmf) / 2;
 			tQmA= new int[tQmf];
 			Lspike = Sampling / 5000 + 3;
-			Lsw = 2 * (Lspike - 1);
+			Lsw = (Lspike - 1);
 			Li = CutPre - CutPre / 3 - Lspike / 2;//-4:4 how likely Overlap?
 			Lf = CutPre + CutPre / 3 - Lspike / 2 +1;
 			//Ll = Lf - Li + Lspike - 1;
@@ -1298,7 +1298,8 @@ namespace SpkDslowFilter {
 			wInfo.WriteLine("# Repolarization threshold*{0}:\n{1}", AmpScale, AHPthr);
 			wInfo.WriteLine("# Recalibration trigger:\n{0}", recalibTrigger);
 			wInfo.WriteLine("# Cutouts:\n{0} {1} {2} {3} {4}", CutPre, CutPost, tCut, tCutLong, df);
-			wInfo.WriteLine("# Smoothing window:\n{0}", tSmth);
+			wInfo.WriteLine("# Smoothing window (detection):\n{0}", tSmth);
+			wInfo.WriteLine("# Smoothing window (amplitudes):\n{0}", Lspike);
 			wInfo.WriteLine ("# Recording channels:");
 			for (int i=0; i<Indices.Length; i++) {
 				wInfo.WriteLine ("{0}", Indices [i]);
@@ -1722,13 +1723,13 @@ namespace SpkDslowFilter {
 									}
 									//compute baseline
 									for (int kk=0; kk<tQm0; kk++){
-										tQmA[kk]=Qm[ch]-QmPreD[ch];
+										tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 									}
 									for (int kk=tQm0; kk<tQmf; kk++){
 										tQmA[kk]=tShape[tQmX[kk]];
 									}
 									Array.Sort (tQmA);
-									b = tQmA [tQmm];
+									b = tQmA [tQmm]+tQmA [tQmm+1];
 									//compute max. amplitude above baseline
 									Lmx = Lsw*b;
 									for (int kk=Li; kk<Lf;kk++){
@@ -1740,7 +1741,7 @@ namespace SpkDslowFilter {
 											Lmx=Lm;
 										}
 									}
-									wShapesX.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+									wShapesX.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 									for (int jj=0; jj<tCut; jj++){
 										wShapesX.Write("{0} ", tShape[jj]);
 									}
@@ -1752,13 +1753,13 @@ namespace SpkDslowFilter {
 										}
 										//compute baseline
 										for (int kk=0; kk<tQm0; kk++){
-											tQmA[kk]=Qm[ch]-QmPreD[ch];
+											tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 										}
 										for (int kk=tQm0; kk<tQmf; kk++){
 											tQmA[kk]=tShape[tQmX[kk]];
 										}
 										Array.Sort (tQmA);
-										b = tQmA [tQmm];
+										b = tQmA [tQmm]+tQmA [tQmm+1];
 										//compute max. amplitude above baseline
 										Lmx = Lsw*b;
 										for (int kk=Li; kk<Lf;kk++){
@@ -1770,7 +1771,7 @@ namespace SpkDslowFilter {
 												Lmx=Lm;
 											}
 										}
-										wShapesX.Write("{0} {1} {2} {3} ",ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+										wShapesX.Write("{0} {1} {2} {3} ",ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 										/*
 										for (int jj=0; jj<tCut; jj++){
 											wShapesX.Write("{0} ",  tShape[jj]);
@@ -1796,13 +1797,13 @@ namespace SpkDslowFilter {
 									}
 									//compute baseline
 									for (int kk=0; kk<tQm0; kk++){
-										tQmA[kk]=Qm[ch]-QmPreD[ch];
+										tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 									}
 									for (int kk=tQm0; kk<tQmf; kk++){
 										tQmA[kk]=tShape[tQmXLong[kk]];
 									}
 									Array.Sort (tQmA);
-									b = tQmA [tQmm];
+									b = tQmA [tQmm]+tQmA [tQmm+1];
 									//compute max. amplitude above baseline
 									Lmx = Lsw*b;
 									for (int kk=Li; kk<Lf;kk++){
@@ -1814,7 +1815,7 @@ namespace SpkDslowFilter {
 											Lmx=Lm;
 										}
 									}
-									wShapesX.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+									wShapesX.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 									for (int jj=0; jj<tCutLong; jj++){
 										wShapesX.Write("{0} ", tShape[jj]);
 									}
@@ -1826,13 +1827,13 @@ namespace SpkDslowFilter {
 										}
 										//compute baseline
 										for (int kk=0; kk<tQm0; kk++){
-											tQmA[kk]=Qm[ch]-QmPreD[ch];
+											tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 										}
 										for (int kk=tQm0; kk<tQmf; kk++){
 											tQmA[kk]=tShape[tQmXLong[kk]];
 										}
 										Array.Sort (tQmA);
-										b = tQmA [tQmm];
+										b = tQmA [tQmm]+tQmA [tQmm+1];
 										//compute max. amplitude above baseline
 										Lmx = Lsw*b;
 										for (int kk=Li; kk<Lf;kk++){
@@ -1844,7 +1845,7 @@ namespace SpkDslowFilter {
 												Lmx=Lm;
 											}
 										}
-										wShapesX.Write("{0} {1} {2} {3} ",ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+										wShapesX.Write("{0} {1} {2} {3} ",ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 										/*
 										for (int jj=0; jj<tCutLong; jj++){
 											wShapesX.Write("{0} ", tShape[jj]);
@@ -2031,13 +2032,13 @@ namespace SpkDslowFilter {
 								}
 								//compute baseline
 								for (int kk=0; kk<tQm0; kk++){
-									tQmA[kk]=Qm[ChInd5[i]]-QmPreD[ChInd5[i]];
+									tQmA[kk]=(QmPreD[ChInd5[i]]-Qm[ChInd5[i]])*2/Ascale;
 								}
 								for (int kk=tQm0; kk<tQmf; kk++){
 									tQmA[kk]=tShape[tQmX[kk]];
 								}
 								Array.Sort (tQmA);
-								b = tQmA [tQmm];
+								b = tQmA [tQmm]+tQmA [tQmm+1];
 								//compute max. amplitude above baseline
 								Lmx = Lsw*b;
 								for (int kk=Li; kk<Lf;kk++){
@@ -2049,7 +2050,7 @@ namespace SpkDslowFilter {
 										Lmx=Lm;
 									}
 								}
-								wShapes.Write("{0} {1} {2} {3} ", ChInd5[i], (Qm[ChInd5[i]]-QmPreD[ChInd5[i]]), b, Lmx);
+								wShapes.Write("{0} {1} {2} {3} ", ChInd5[i], ((QmPreD[ChInd5[i]]-Qm[ChInd5[i]])*2/Ascale), b, Lmx);
 								for (int jj=0; jj<tCut; jj++){
 									wShapes.Write("{0} ", tShape[jj]);
 								}
@@ -2059,13 +2060,13 @@ namespace SpkDslowFilter {
 									}
 									//compute baseline
 									for (int kk=0; kk<tQm0; kk++){
-										tQmA[kk]=Qm[ch]-QmPreD[ch];
+										tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 									}
 									for (int kk=tQm0; kk<tQmf; kk++){
 										tQmA[kk]=tShape[tQmX[kk]];
 									}
 									Array.Sort (tQmA);
-									b = tQmA [tQmm];
+									b = tQmA [tQmm]+tQmA [tQmm+1];
 									//compute max. amplitude above baseline
 									Lmx = Lsw*b;
 									for (int kk=Li; kk<Lf;kk++){
@@ -2077,7 +2078,7 @@ namespace SpkDslowFilter {
 											Lmx=Lm;
 										}
 									}
-									wShapes.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+									wShapes.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 									for (int jj=0; jj<tCut; jj++){
 										wShapes.Write("{0} ", tShape[jj]);
 									}
@@ -2089,13 +2090,13 @@ namespace SpkDslowFilter {
 										}
 										//compute baseline
 										for (int kk=0; kk<tQm0; kk++){
-											tQmA[kk]=Qm[ch]-QmPreD[ch];
+											tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 										}
 										for (int kk=tQm0; kk<tQmf; kk++){
 											tQmA[kk]=tShape[tQmX[kk]];
 										}
 										Array.Sort (tQmA);
-										b = tQmA [tQmm];
+										b = tQmA [tQmm]+tQmA [tQmm+1];
 										//compute max. amplitude above baseline
 										Lmx = Lsw*b;
 										for (int kk=Li; kk<Lf;kk++){
@@ -2107,7 +2108,7 @@ namespace SpkDslowFilter {
 												Lmx=Lm;
 											}
 										}
-										wShapes.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+										wShapes.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 										/*
 										for (int jj=0; jj<tCut; jj++){
 											wShapes.Write("{0} ", tShape[jj]);
@@ -2132,13 +2133,13 @@ namespace SpkDslowFilter {
 								}
 								//compute baseline
 								for (int kk=0; kk<tQm0; kk++){
-									tQmA[kk]=Qm[ChInd5[i]]-QmPreD[ChInd5[i]];
+									tQmA[kk]=(QmPreD[ChInd5[i]]-Qm[ChInd5[i]])*2/Ascale;
 								}
 								for (int kk=tQm0; kk<tQmf; kk++){
 									tQmA[kk]=tShape[tQmXLong[kk]];
 								}
 								Array.Sort (tQmA);
-								b = tQmA [tQmm];
+								b = tQmA [tQmm]+tQmA [tQmm+1];
 								//compute max. amplitude above baseline
 								Lmx = Lsw*b;
 								for (int kk=Li; kk<Lf;kk++){
@@ -2150,7 +2151,7 @@ namespace SpkDslowFilter {
 										Lmx=Lm;
 									}
 								}
-								wShapes.Write("{0} {1} {2} {3} ", ChInd5[i], (Qm[ChInd5[i]]-QmPreD[ChInd5[i]]), b, Lmx);
+								wShapes.Write("{0} {1} {2} {3} ", ChInd5[i], ((QmPreD[ChInd5[i]]-Qm[ChInd5[i]])*2/Ascale), b, Lmx);
 								for (int jj=0; jj<tCutLong; jj++){
 									wShapes.Write("{0} ", tShape[jj]);
 								}
@@ -2160,13 +2161,13 @@ namespace SpkDslowFilter {
 									}
 									//compute baseline
 									for (int kk=0; kk<tQm0; kk++){
-										tQmA[kk]=Qm[ch]-QmPreD[ch];
+										tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 									}
 									for (int kk=tQm0; kk<tQmf; kk++){
 										tQmA[kk]=tShape[tQmXLong[kk]];
 									}
 									Array.Sort (tQmA);
-									b = tQmA [tQmm];
+									b = tQmA [tQmm]+tQmA [tQmm+1];
 									//compute max. amplitude above baseline
 									Lmx = Lsw*b;
 									for (int kk=Li; kk<Lf;kk++){
@@ -2178,7 +2179,7 @@ namespace SpkDslowFilter {
 											Lmx=Lm;
 										}
 									}
-									wShapes.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+									wShapes.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 									for (int jj=0; jj<tCutLong; jj++){
 										wShapes.Write("{0} ", tShape[jj]);
 									}
@@ -2190,13 +2191,13 @@ namespace SpkDslowFilter {
 										}
 										//compute baseline
 										for (int kk=0; kk<tQm0; kk++){
-											tQmA[kk]=Qm[ch]-QmPreD[ch];
+											tQmA[kk]=(QmPreD[ch]-Qm[ch])*2/Ascale;
 										}
 										for (int kk=tQm0; kk<tQmf; kk++){
 											tQmA[kk]=tShape[tQmXLong[kk]];
 										}
 										Array.Sort (tQmA);
-										b = tQmA [tQmm];
+										b = tQmA [tQmm]+tQmA [tQmm+1];
 										//compute max. amplitude above baseline
 										Lmx = Lsw*b;
 										for (int kk=Li; kk<Lf;kk++){
@@ -2208,7 +2209,7 @@ namespace SpkDslowFilter {
 												Lmx=Lm;
 											}
 										}
-										wShapes.Write("{0} {1} {2} {3} ", ch, (Qm[ch]-QmPreD[ch]), b, Lmx);
+										wShapes.Write("{0} {1} {2} {3} ", ch, ((QmPreD[ch]-Qm[ch])*2/Ascale), b, Lmx);
 										/*
 										for (int jj=0; jj<tCutLong; jj++){
 											wShapes.Write("{0} ", tShape[jj]);

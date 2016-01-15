@@ -23,7 +23,7 @@ def readInfoFile(TxtFile, HdfFile):
 	b=file(TxtFile + '_Info.txt')
 	VarName=''
 	ThrScale=2
-	Ascale=-64
+	#Ascale=-64
 	SqIv=0
 	for i in b:
 		if '#' in i:
@@ -55,8 +55,11 @@ def readInfoFile(TxtFile, HdfFile):
 			if VarName=='# Amplitude scaling:\n':
 				Ascale=int(i)
 				print i
-			if VarName=='# Smoothing window:\n':
+			if VarName=='# Smoothing window (detection):\n':
 				SmoothN=int(i)
+				print i
+			if VarName=='# Smoothing window (amplitudes):\n':
+				Lspike=int(i)
 				print i
 			if VarName=='#Number of spikes (4 channel):\n':
 				print i
@@ -121,6 +124,7 @@ def readInfoFile(TxtFile, HdfFile):
 	f.create_dataset('ThrScale', data=ThrScale)
 	f.create_dataset('Ascale', data=Ascale/SmoothN)
 	f.create_dataset('SmoothN', data=SmoothN)
+	f.create_dataset('Lspike', data=Lspike)
 	f.create_dataset('tMax', data=tMax)
 	f.create_dataset('nFrames', data=nFrames)
 	f.create_dataset('AmplitudeThresholds', data=SpkThreshold)
@@ -158,7 +162,7 @@ def readAvgFile(TxtFile, HdfFile, NCh):
 		X.append(int(i))
 	b.close()
 	B=np.array(X)
-	Bstd=np.std(B)/4.
+	Bstd=np.std(B)/2.#sum over 2 frames...
 	f=h5py.File(HdfFile,'r+')
 	nFrames=f['nFrames'].value
 	#Ascale=int(f['Ascale'].value)
@@ -255,7 +259,9 @@ def readSpikesFile(TxtFile, HdfFile, NoisyChFile, NCh, removeCh, tMax):
 #u'print(n)'))
 
 class LocationFinder:
-	def __init__(self,eCentered,Ascale,IgnCh,PreCut,Ncut,NcutL,Qdavg):
+	def __init__(self,eCentered,Ascale,IgnCh,PreCut,Ncut,NcutL,Qdavg,LspikeN,recCh):
+		self.recCh=recCh
+		self.LspikeN=LspikeN
 		self.Qdavg=Qdavg
 		self.Vscale=2.
 		self.PreCut=PreCut
@@ -273,7 +279,7 @@ class LocationFinder:
 			np.array([4,0,2,7,8]),np.array([5,1,0,3,8]),np.array([1,0,4]),\
 			np.array([2,0,1]),np.array([0,2,3]),np.array([4,0,3])]
 			self.MapxL=np.array([8,5,5,5,5,3,3,3,3])
-			self.Ax=np.array([[0,0,1,0,-1,-1,1,1,-1],[0,-1,0,1,0,-1,-1,1,1]])
+			self.Ax=np.array([[0,-1,0,1,0,-1,-1,1,1],[0,0,1,0,-1,-1,1,1,-1]])
 			self.Nch=9
 			self.Nch0=5
 			self.OampNorm=np.ones(self.Nch,dtype=float)
@@ -287,7 +293,7 @@ class LocationFinder:
 			np.array([1,2,5,7]),np.array([2,1,6,8]),np.array([2,3,7,9]),\
 			np.array([2,3,8,10]),np.array([0,3,11,9]),np.array([10,0,3,4])]
 			self.MapxL=np.array([7,7,7,7,4,4,4,4,4,4,4,4])
-			self.Ax=np.array([[0,1,1,0,0,1,2,2,1,0,-1,-1],[0,0,1,1,-1,-1,0,1,2,2,1,0]])
+			self.Ax=np.array([[0,0,1,1,-1,-1,0,1,2,2,1,0],[0,1,1,0,0,1,2,2,1,0,-1,-1]])
 			self.Nch=12
 			self.Nch0=4
 			self.OampNorm=2*np.ones(self.Nch,dtype=float)
@@ -330,70 +336,67 @@ class LocationFinder:
 			CM=np.sum(CMamp[None,:]*self.Ax,axis=1)/np.clip(np.sum(CMamp),1e-6,1e12)
 		ShArea=np.sqrt(np.sum(Oamp[None,:]*(self.Ax-CM[:,None])**2)\
 		/np.clip(np.sum(Oamp),1e-6,1e12))
-		return CM,CMamp,ShArea
+		return CM,CMamp/self.LspikeN/2.,ShArea
 	
-	def Iterate(self,z,ts,lSpk):
+	def Iterate(self,z,ts,rSpk):
 		###baseline
-		if lSpk:
-			z0=z[self.IbL]##channels
-			z2=z[self.IbL+2]##baseline
-			z3=z[self.IbL+3]-z2##amplitudes
-			goodCh=(np.abs(z2)<self.Vscale*2000)*self.UseCh[z0]#working channels
-		else:
+		if rSpk:
 			z0=z[self.Ib]##channels
 			z2=z[self.Ib+2]##baseline
-			z3=z[self.Ib+3]-z2##amplitudes
+			z3=z[self.Ib+3]-self.LspikeN*z2##amplitudes*LspikeN
+			#print z3
 			goodCh=(np.abs(z2)<self.Vscale*2000)*self.UseCh[z0]#working channels
-		if not all(goodCh):
-			if not all(goodCh[:self.Nch0]):
-				if lSpk:
-					goodCh0=np.arange(self.Nch0,dtype=int)[goodCh[:self.Nch0]]
-					zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[goodCh0,4:]
-				else:
-					goodCh0=np.arange(self.Nch0,dtype=int)[goodCh[:self.Nch0]]
-					zShape=np.reshape(z[:self.Lx],(self.Nch0,self.Ncut0))[goodCh0,4:]
-				SAmp=np.zeros(self.Nch, dtype=float)
-				SAmp[goodCh]=z3[goodCh]*1./np.clip(self.Qdavg[z0[goodCh]],1,1e12)
-				###normalize by variance
-				zShape*=1./np.clip(self.Qdavg[z0[goodCh0]][:,None],1,1e12)
-				for jj in np.nonzero(True-goodCh)[0]:
-					SAmp[jj]=np.median(SAmp[self.Mapx[jj]])*self.MapxL[jj]/8.
-				CM,CMamp,ShArea=self.find_Location(SAmp)
-				#weighted sum of raw traces
-				wA=np.sum(zShape*CMamp[goodCh0,None]*1./np.clip(np.sum(CMamp[goodCh0]),1,1e12),axis=0)
-				if z0[0]>-1:
-					CM+=np.array([z0[0]%64,z0[0]/64])
-				else:#find first nonzero
-					iind=np.nonzero(z0[0])[0][0]
-					CM+=np.array([z0[iind]%64,z0[iind]/64])-self.Ax[iind,:]
-			else:
-				if lSpk:
-					zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[:,4:]
-				else:
-					zShape=np.reshape(z[:self.Lx],(self.Nch0,self.Ncut0))[:,4:]
-				SAmp=np.zeros(self.Nch, dtype=float)
-				SAmp[goodCh]=z3[goodCh]*1./np.clip(self.Qdavg[z0[goodCh]],1,1e12)
-				###normalize by variance
-				zShape*=1./np.clip(self.Qdavg[z0[:self.Nch0]][:,None],1,1e12)
-				for jj in np.nonzero(True-goodCh)[0]:
-					SAmp[jj]=np.median(SAmp[self.Mapx[jj]])*self.MapxL[jj]/8.
-				CM,CMamp,ShArea=self.find_Location(SAmp)
-				#weighted sum of raw traces
-				wA=np.sum(zShape*CMamp[:self.Nch0,None]*1./np.clip(np.sum(CMamp[:self.Nch0]),1,1e12),axis=0)
-				CM+=np.array([z0[0]%64,z0[0]/64])
 		else:
-			if lSpk:
-				zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[:,4:]
-			else:
+			z0=z[self.IbL]##channels
+			z2=z[self.IbL+2]##baseline
+			z3=z[self.IbL+3]-self.LspikeN*z2##amplitudes*LspikeN
+			goodCh=(np.abs(z2)<self.Vscale*2000)*self.UseCh[z0]#working channels
+		if all(goodCh):
+			if rSpk:
 				zShape=np.reshape(z[:self.Lx],(self.Nch0,self.Ncut0))[:,4:]
-			SAmp=np.zeros(self.Nch, dtype=float)
-			SAmp=z3*1./np.clip(self.Qdavg[z0],1,1e12)
-			###normalize by variance
-			zShape*=1./np.clip(self.Qdavg[z0[:self.Nch0]][:,None],1,1e12)
+			else:
+				zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[:,4:]
+			SAmp=-z3*1./np.clip(self.Qdavg[z0],1,1e12)
 			CM,CMamp,ShArea=self.find_Location(SAmp)
 			#weighted sum of raw traces
-			wA=np.sum(zShape*CMamp[:self.Nch0,None]*1./np.clip(np.sum(CMamp[:self.Nch0]),1,1e12),axis=0)
-			CM+=np.array([z0[0]%64,z0[0]/64])
+			wA=np.sum(zShape*(CMamp[:self.Nch0]*1./self.Qdavg[z0[:self.Nch0]])[:,None]\
+			*1./np.clip(np.sum(CMamp[:self.Nch0]),1,1e12),axis=0)
+			CM+=np.array([self.recCh[z0[0]]/64,self.recCh[z0[0]]%64])
+		else:
+			if all(goodCh[:self.Nch0]):
+				if rSpk:
+					zShape=np.reshape(z[:self.Lx],(self.Nch0,self.Ncut0))[:,4:]
+				else:
+					zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[:,4:]
+				SAmp=np.zeros(self.Nch, dtype=float)
+				SAmp[goodCh]=-z3[goodCh]*1./np.clip(self.Qdavg[z0[goodCh]],1,1e12)
+				for jj in np.nonzero(True-goodCh)[0]:
+					SAmp[jj]=np.median(SAmp[self.Mapx[jj]])*self.MapxL[jj]/8.
+				CM,CMamp,ShArea=self.find_Location(SAmp)
+				#weighted sum of raw traces
+				wA=np.sum(zShape*(CMamp[:self.Nch0]*1./self.Qdavg[z0[:self.Nch0]])[:,None]\
+				*1./np.clip(np.sum(CMamp[:self.Nch0]),1,1e12),axis=0)
+				CM+=np.array([self.recCh[z0[0]]/64,self.recCh[z0[0]]%64])
+			else:
+				if rSpk:
+					goodCh0=np.arange(self.Nch0,dtype=int)[goodCh[:self.Nch0]]
+					zShape=np.reshape(z[:self.Lx],(self.Nch0,self.Ncut0))[goodCh0,4:]
+				else:
+					goodCh0=np.arange(self.Nch0,dtype=int)[goodCh[:self.Nch0]]
+					zShape=np.reshape(z[:self.LxL],(self.Nch0,self.NcutL0))[goodCh0,4:]
+				SAmp=np.zeros(self.Nch, dtype=float)
+				SAmp[goodCh]=-z3[goodCh]*1./np.clip(self.Qdavg[z0[goodCh]],1,1e12)
+				for jj in np.nonzero(True-goodCh)[0]:
+					SAmp[jj]=np.median(SAmp[self.Mapx[jj]])*self.MapxL[jj]/8.
+				CM,CMamp,ShArea=self.find_Location(SAmp)
+				#weighted sum of raw traces
+				wA=np.sum(zShape*(CMamp[goodCh0]*1./self.Qdavg[z0[goodCh0]])[:,None]\
+				*1./np.clip(np.sum(CMamp[goodCh0]),1,1e12),axis=0)
+				if z0[0]>-1:
+					CM+=np.array([self.recCh[z0[0]]/64,self.recCh[z0[0]]%64])
+				else:#find first nonzero
+					iind=np.nonzero(z0[0])[0][0]
+					CM+=np.array([self.recCh[z0[iind]]/64,self.recCh[z0[iind]]%64])-self.Ax[iind,:]
 		return CM,CMamp,wA/self.Vscale,ShArea/self.Vscale
 
 
@@ -405,13 +408,12 @@ def readShapesFile(TxtFile, HdfFile, NSpk):
 	Ncut=int(f['NCut'].value)
 	NcutL=int(f['NCutLong'].value)
 	PreCut=int(f['PreCut'].value)
-	PostCut=int(f['PostCut'].value)
-	Reverse=int(f['reverse Detection'].value)
+	#Reverse=int(f['reverse Detection'].value)
 	Ascale=np.abs(int(f['Ascale'].value))
+	Lspike=int(f['Lspike'].value)
+	LspikeN=Lspike-1#half area under kernel
 	g=f['RawEvents']
 	g.create_dataset('Locations', (NSpk,2))
-	g.create_dataset('ShAmp0', (NSpk,))
-	g.create_dataset('ShAmp', (NSpk,))
 	g.create_dataset('ShAmpX', (NSpk,))
 	g.create_dataset('ShArea', (NSpk,))
 	g.create_dataset('Shapes', (NSpk,NcutL), fillvalue=0)
@@ -419,39 +421,30 @@ def readShapesFile(TxtFile, HdfFile, NSpk):
 	SortInd=np.array(g['SortInd'].value,dtype=int)
 	SpkT=np.array(g['Times'].value)
 	Qdavg=np.array(f['ChannelVariability'].value)
-	recCh=np.array(f['recordedChannels'].value)
+	recCh=np.array(f['recordedChannels'].value,dtype=int)
 	PeakL=np.array(g['RepolarizingSpikes'].value,dtype=bool)
-	##h=f['GlobalVoltageFluctuations']
-	##Bd=np.diff(h['medianVoltage'].value)
-	##print Bd.shape
-	##Vsbias=h['VFBias'].value
-	#invert SortInd
 	SortIndInv=np.zeros(SortInd.shape[0],dtype=int)
 	SortIndInv[SortInd]=np.arange(SortInd.shape[0])
-	##Bsupport=(Sampling*6)/5000+Sampling/1000#need a minimum cutout region
-	##BInd=np.zeros((2,Bsupport),dtype=int)#maybe a bit long...
-	##BInd[:,:(Sampling)/2000]=1#online baseline estimate
-	##BInd[:,Sampling/2000:Sampling/1000]=2+np.arange((Sampling+1000)/2000,dtype=int)[None,:]
-	##BInd[0,-(Sampling*6)/5000:]=NcutL+2+np.arange(-(Sampling*6)/5000,0,dtype=int)
-	##BInd[1,-(Sampling*6)/5000:]=Ncut+2+np.arange(-(Sampling*6)/5000,0,dtype=int)
 	### read shapes
 	fName=np.array(['_Shapes.txt','_ShapesX.txt'])
 	for iiii in range(2):
 		b=file(TxtFile + fName[iiii])
-		LF=LocationFinder(iiii==0,Ascale,IgnCh,PreCut,Ncut,NcutL,Qdavg)
+		LF=LocationFinder(iiii==0,Ascale,IgnCh,PreCut,Ncut,NcutL,Qdavg,LspikeN,recCh)
 		for i in b:
 			z=np.array(i.split(),dtype=int)
 			if not ((iiii==0)*(int(z[0]) in IgnCh)):
 				nInd=SortIndInv[n]
-				CM,CMamp,wA,ShArea=LF.Iterate(z,SpkT[nInd],True-PeakL[nInd])
-				g['Locations'][nInd,:]=CM[::-1]+0.5#want (y,x) format to be consistent with brainwave
-				g['ShAmpX'][nInd]=np.sum(CMamp)#might be less noisy... and will subtract a larger baseline for wide spikes
+				CM,CMamp,wA,ShArea=LF.Iterate(z,SpkT[nInd],PeakL[nInd])
+				#print CM
+				g['Locations'][nInd,:]=CM+0.5# electrodes at 0.5,1.5,...
+				g['ShAmpX'][nInd]=np.sum(CMamp)
 				g['ShArea'][nInd]=ShArea
 				g['Shapes'][nInd,:Ncut*PeakL[nInd]+NcutL*(1-PeakL[nInd])]=wA
 				n+=1
 		b.close()
 	g['Locations'][:,:]=np.clip(g['Locations'].value\
 	+1e-2*scipy.randn(g['Locations'].value.shape[0],2),0.,63.999)#to avoid discretization effects
+	#redundant...
 	f.create_dataset('lenCutouts', data=Ncut)
 	f.create_dataset('lenCutoutsLong', data=NcutL)
 	f.create_dataset('PeakIndex', data=PreCut)
@@ -552,7 +545,7 @@ class LocationFinderI:
 		#bad stuff #ignore channels in list
 		return np.all(np.abs(z[:,4:])<self.Vscale*2000,axis=1)*self.UseCh[z[:,0]]#working channels
 	
-	def ChAmplitudes(self,z,lSpk,Vbias,ts):
+	def ChAmplitudes(self,z,lSpk,ts):
 		###Amplitudes
 		#minimum over Lspike consecutive frames
 		#z[:,2:]-=Vsbias[z[:,0],None]*bA2[None,:]
@@ -561,17 +554,15 @@ class LocationFinderI:
 		li=self.PreCut-self.PreCut/3+4
 		if self.Lspike==3:
 			#doesn't affect baseline
-			Z=np.sum(z[:,li:lf]\
-			-self.Bd[ts-(self.PreCut)/3:ts+self.Lspike+self.PreCut/3][None,:]*Vbias[:,None],axis=0)
+			Z=np.sum(z[:,li:lf],axis=0)
 			lx=np.argmin(2*Z[:-2]+3*Z[1:-1]+2*Z[2:])
 			SAmp=-1./7.*(2*z[:,li+lx]+3*z[:,li+lx]+2*z[:,li+lx])
 		else:
-			Zc=np.cumsum(np.sum(z[:,li-1:lf]-\
-			self.Bd[ts-self.PreCut/3-1:ts+self.Lspike+self.PreCut/3][None,:]*Vbias[:,None],axis=0))
+			Zc=np.cumsum(np.sum(z[:,li-1:lf],axis=0))
 			lx=np.argmin(Zc[self.Lspike+1:]-Zc[:-self.Lspike-1]+Zc[self.Lspike:-1]-Zc[1:-self.Lspike],axis=0)
 			SAmp=-1./(2.*self.Lspike-2.)*(z[:,li+lx]+z[:,li+lx+self.Lspike-1]\
 			+2*np.sum(z[:,li+lx+1:li+lx+self.Lspike-1],axis=1))
-		return SAmp
+		return SAmp/2.
 		
 	def find_Location(self,SAmp):
 		SAmp0=np.clip(SAmp,0,1e12)/2.#raw amplitude estimate
@@ -603,7 +594,7 @@ class LocationFinderI:
 		/np.clip(np.sum(Oamp),1e-6,1e12))
 		return CM,CMamp,ShArea
 		
-	def Iterate_inserted(self,z,ts,lSpk,Vbias):
+	def Iterate_inserted(self,z,ts,lSpk):
 		#bA2=self.Bd[ts-self.PreCut:ts-self.PreCut+self.Ncut+self.NcutD*lSpk+1]
 		goodCh=self.boundedAmplitudes(z)
 		if z[0,0]>-1:
@@ -625,18 +616,18 @@ class LocationFinderI:
 		if (Iind==5) and (self.Nch==9):
 			for ij in range(9):
 				if goodCh[ij]:
-					self.Slist[self.RIseq[ICh]/16*15+Atime][np.clip(np.array(z[ij,self.PreCut-1:self.Ncut+4]\
+					self.Slist[self.RIseq[ICh]/16*15+Atime][np.clip(np.array(z[ij,self.PreCut-1:self.Ncut+4]*2\
 					,dtype=int)+400,0,511),np.arange(self.Ncut-self.PreCut+5),ij]+=1
 		###baseline
-		z[:,1]*=1./self.Ascale
+		#z[:,1]*=1./self.Ascale
 		if lSpk:
 			z[:,1:]-=np.median(z[:,self.BInd[0,:]],axis=1)[:,None]
 		else:
 			z[:,1:]-=np.median(z[:,self.BInd[1,:]],axis=1)[:,None]
 		#zChannels[:,noCh]=self.Ax+np.array([z[:,0]%64,z[:,0]/64])[:,None]#no use
 		SAmp=np.zeros(self.Nch, dtype=float)
-		SAmp[goodCh]=np.array(self.ChAmplitudes(z[goodCh,:],lSpk,Vbias[goodCh],ts),dtype=float)\
-		*1./np.clip(self.Qdavg[z[goodCh,0]],1,1e12)
+		SAmp[goodCh]=np.array(self.ChAmplitudes(z[goodCh,:],lSpk,ts),dtype=float)\
+		*0.5/np.clip(self.Qdavg[z[goodCh,0]],1,1e12)
 		###normalize by variance
 		z[goodCh,4:]/=np.clip(self.Qdavg[z[goodCh,0]][:,None],1,1e12)
 		if not all(goodCh):
@@ -707,9 +698,9 @@ def readShapesFileInserted(TxtFile, HdfFile, NSpk, Sampling, Lspike=4):
 				else:
 					CM,CMamp,wA,ShArea=LF2.Iterate_inserted(z,SpkT[nInd],True-PeakL[nInd],Vsbias[z[:,0]])
 				g['Locations'][nInd,:]=CM[::-1]+0.5#want (y,x) format to be consistent with brainwave
-				g['ShAmpX'][nInd]=np.sum(CMamp)/4.#might be less noisy... and will subtract a larger baseline for wide spikes
-				g['ShArea'][nInd]=ShArea/4.
-				g['Shapes'][nInd,:Ncut*PeakL[nInd]+NcutL*(1-PeakL[nInd])]=wA/4.
+				g['ShAmpX'][nInd]=np.sum(CMamp)#might be less noisy... and will subtract a larger baseline for wide spikes
+				g['ShArea'][nInd]=ShArea
+				g['Shapes'][nInd,:Ncut*PeakL[nInd]+NcutL*(1-PeakL[nInd])]=wA
 				n+=1
 		b.close()
 	MedianShape=np.zeros((15,16,Ncut-3,9))

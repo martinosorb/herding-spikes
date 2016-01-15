@@ -15,7 +15,7 @@ if not os.path.exists(Folder+Subfolder+PlotFolder):
 	os.mkdir(Folder+Subfolder+PlotFolder)
 for iii in range(len(Files)):
 	PlotFile=Folder+Subfolder+PlotFolder+Files[iii]
-	HdfFile=Folder+Subfolder+HdfFolder+Files[iii]+'_v27.hdf5'
+	HdfFile=Folder+Subfolder+HdfFolder+Files[iii]+'_v28.hdf5'
 
 	###Rasterplot
 	SpkD_plot_v24.Rasterplot(HdfFile, FileName=PlotFile+'_Raster_repolarizing.png', FieldName=''\
