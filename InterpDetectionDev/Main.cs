@@ -15,36 +15,36 @@ using System.Drawing;
 Changes:
 -Possibility to run the detection with reversed time axis, and/or to downsample the data by a factor of 2
 
--implemented additional filter for low frequencies (50Hz). This version 
+-implemented additional filter for low frequencies (50Hz). This version
 averages blocks of 2 frames (except for downsampling case)
 takes the second lowest value in blocks of 4 averages (done every 8 frames)
 and again the second lowest value from 4 such blocks (total 32 frames, done every 16(<=12kHz) or 32 frames).
-Then take a weighted sliding average of 3 (NFblocks, increase to 4 for >20kHz) of those estimates, 
+Then take a weighted sliding average of 3 (NFblocks, increase to 4 for >20kHz) of those estimates,
 where the most recent estimate increases its weight by 1/4 every 8 frames, and the weight of the oldest estimate is decreased by 1/4.
 This procedure is done ahead of the detection time (TauFiltOffset),
 and there is a parameter for the timescale to adapt a baseline estimate (TauFilt).
 
--converted matrices of surrounding electrodes into (seperate) jagged arrays, can use 'foreach' and seems to be a bit faster. Also 
+-converted matrices of surrounding electrodes into (seperate) jagged arrays, can use 'foreach' and seems to be a bit faster. Also
 made a list of locations that do not include locations at the boundary (can remove a check at runtime)
 
--Allows to keep a voltage mimimum for 3 frames (have to set dtEmx to 3 for that) 
+-Allows to keep a voltage mimimum for 3 frames (have to set dtEmx to 3 for that)
 to allow for larger temporal differences of the same spike on neighboring electrodes
 
 -Compute weighted averages and test for threshold crossings only every dtTmx (i.e. 3) frames to make the algorithm faster.
-when (Threshold-2) is crossed, every frame is analyzed. Further, the history of filtered voltages is kept for one frame 
-and, when (Threshold-2) is crossed weighted averages are computed for the preceeding frame as well. 
+when (Threshold-2) is crossed, every frame is analyzed. Further, the history of filtered voltages is kept for one frame
+and, when (Threshold-2) is crossed weighted averages are computed for the preceeding frame as well.
 (looses < 1% of detections, possibly with short spike shapes and mostly located on electrodes, therefore not necessarily real spikes)
-Should be fine, since voltages are averaged over 3 frames and minima are kept for (dtEMx-1) frame 
+Should be fine, since voltages are averaged over 3 frames and minima are kept for (dtEMx-1) frame
 (but the gap is effectively only (dtEMx-1) frames, and that for a lower threshold).
 
 -Allows to define the cut-out region (excluding the center frame).
 
--Scaling amplitude and threshold initially rather than during the detection. Put decimal numbers in the gui 
+-Scaling amplitude and threshold initially rather than during the detection. Put decimal numbers in the gui
 (need to divide previous valued by 2; i.e. 5 instead of 10), so now they represent multiples of the variability estimate v.
 
 - removed determination of correlations (have to put that back some time)
 
-- have a parameter for the smoothing window (2 frames+Sampling/5000) for the detection (adjustable). 
+- have a parameter for the smoothing window (2 frames+Sampling/5000) for the detection (adjustable).
 This is one frame longer for the localization.
 
 - Moved part of the localization here to save space in the output files and computation time in the postprocessing. Only output 4-5 (filtered) raw data traces (instead of 9-12).
@@ -209,21 +209,21 @@ namespace SpkDslowFilter {
 		/*
 		//for testing only
 		//inserted spikes
-		int[,] Iweights = new int[16, 9] {{1000, 190, 250, 250, 250, 250, 190, 190, 190}, 
-			{1000, 208, 250, 300, 250, 214, 174, 208, 174}, 
-			{750, 225, 248, 375, 248, 187, 159, 225, 159}, 
-			{500, 240, 240, 500, 240, 166, 146, 240, 146}, 
-			{1000, 208, 300, 250, 214, 250, 208, 174, 174}, 
-			{1000, 232, 300, 300, 214, 214, 187, 187, 161}, 
-			{750, 258, 297, 375, 213, 187, 168, 198, 149}, 
-			{500, 282, 282, 500, 208, 166, 153, 208, 138}, 
-			{750, 225, 375, 248, 187, 248, 225, 159, 159}, 
-			{750, 258, 375, 297, 187, 213, 198, 168, 149}, 
-			{679, 297, 370, 370, 187, 187, 177, 177, 140}, 
-			{486, 339, 339, 486, 183, 166, 159, 183, 131}, 
-			{500, 240, 500, 240, 166, 240, 240, 146, 146}, 
-			{500, 282, 500, 282, 166, 208, 208, 153, 138}, 
-			{486, 339, 486, 339, 166, 183, 183, 159, 131}, 
+		int[,] Iweights = new int[16, 9] {{1000, 190, 250, 250, 250, 250, 190, 190, 190},
+			{1000, 208, 250, 300, 250, 214, 174, 208, 174},
+			{750, 225, 248, 375, 248, 187, 159, 225, 159},
+			{500, 240, 240, 500, 240, 166, 146, 240, 146},
+			{1000, 208, 300, 250, 214, 250, 208, 174, 174},
+			{1000, 232, 300, 300, 214, 214, 187, 187, 161},
+			{750, 258, 297, 375, 213, 187, 168, 198, 149},
+			{500, 282, 282, 500, 208, 166, 153, 208, 138},
+			{750, 225, 375, 248, 187, 248, 225, 159, 159},
+			{750, 258, 375, 297, 187, 213, 198, 168, 149},
+			{679, 297, 370, 370, 187, 187, 177, 177, 140},
+			{486, 339, 339, 486, 183, 166, 159, 183, 131},
+			{500, 240, 500, 240, 166, 240, 240, 146, 146},
+			{500, 282, 500, 282, 166, 208, 208, 153, 138},
+			{486, 339, 486, 339, 166, 183, 183, 159, 131},
 			{414, 414, 414, 414, 163, 163, 163, 163, 123}};
 		int[] Inn = new int[9] {0, 65, 64, 1, -64, -1, 63, -63, -65};
 		int[] Ann = new int[15] {12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6, 18, 5, 19};
@@ -245,7 +245,7 @@ namespace SpkDslowFilter {
 			{21756, 55477, 76142, 59629, 21842, -6827, -20973, -25322, -24752, -22224, -19206, -16331, -13819, -11712, -9976, -8559, -7403, -6459, -5684, -5047, -4518, -4078, -3709, -3398},
 			{23479, 56814, 76391, 57372, 19598, -8096, -21445, -25358, -24599, -22012, -18994, -16141, -13658, -11578, -9866, -8469, -7329, -6397, -5634, -5004, -4483, -4048, -3684, -3376}};
 		*/
-		
+
 		public int[] SetInitialParams (long nFrames, double nSec, int sf, double sfd, int NCh, int[] Indices)
 		{
 			dfTI= new int[3];
@@ -585,10 +585,10 @@ namespace SpkDslowFilter {
 			tSmth1 = tSmth - 1;
 			ACF=(upDown2.SelectedIndex==0);
 			form1.Dispose();
-			Avgs2= new int[NChannels,NFblocks];
 			if (sf / 5000 > 3) {
 				NFblocks = sf / 5000;
 			}
+			Avgs2= new int[NChannels,NFblocks];
 			FiltNorm = 2*(8 * (NFblocks - 1) + 2);
 			HF = (sf > 12000);
 			if (HF) {
@@ -753,22 +753,22 @@ namespace SpkDslowFilter {
 		}
 
 
-		
+
 		public void openSpikeFile (string name) {
 			fs = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
 			w = new StreamWriter(fs);
 		}
-		
+
 		public void openShapeFile (string name) {
 			fsShapes = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
 			wShapes = new StreamWriter(fsShapes);
 		}
-		
+
 		public void openSpikeXFile (string name) {
 			fsX = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
 			wX = new StreamWriter(fsX);
 		}
-		
+
 		public void openShapeXFile (string name) {
 			fsShapesX = new FileStream(name, FileMode.OpenOrCreate, FileAccess.Write);
 			wShapesX = new StreamWriter(fsShapesX);
@@ -2409,7 +2409,7 @@ namespace SpkDslowFilter {
 			// Initialize an instance of the BrwRdr class
 			BrwRdr brwRdr = new BrwRdr ();
 			// you must use a valid full file path
-			
+
 			// Create and display a fileChooserDialog
 			OpenFileDialog openFileDialog1 = new OpenFileDialog ();
 			//openFileDialog1.InitialDirectory = "c:\\";
@@ -2457,7 +2457,7 @@ namespace SpkDslowFilter {
 			saveFileDialog1.DefaultExt = "txt";
 			saveFileDialog1.InitialDirectory = Directory.GetCurrentDirectory ();
 			saveFileDialog1.Title = "Save Spikes As";
-				
+
 			if (saveFileDialog1.ShowDialog () != DialogResult.OK) {
 				throw new Exception ("File dialog error");
 			}
@@ -2592,8 +2592,3 @@ namespace SpkDslowFilter {
 		}
 	}
 }
-
-
-
-
-
