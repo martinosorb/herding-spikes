@@ -5,6 +5,7 @@ Software for high density multi-electrode array recordings.
 
  - [onlineDetection](onlineDetection): Online-capable spike detection, done independently on each recording channel.
  - [interpolatingDetection](interpolatingDetection): Spike detection with spatial interpolation. Returns cut-outs for detected events from multiple channels, which allows performing spike localisation.
+ - [InterpDetectionDev](InterpDetectionDev): Development version of the interpolation and spike localisation code.
  - [postProcessing](postProcessing): Programs for removing duplicate events in spikes detected with the online methot, and localise spikes detected with the interpolation method.
  - [clustering](clustering): Perform spike sorting by location and PCA on interpolated data.
  - [visualisationtool](visualisationtool): A GUI tool for visualising and annotating sorted spikes.
