@@ -13,6 +13,6 @@ Software for high density multi-electrode array recordings.
 
 ## Contributors
 - [Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/index.html): Spike sorting
-- [Oliver Muthmann](ollimuh@googlemail.com): Spike detection
-- [Martino Sorbaro](martino.sorbaro@ed.ac.uk): Spike sorting
-- [Cesar Juarez Ramirez](cesaripn2@gmail.com): Visualisation toolkit
+- [Oliver Muthmann](mailto:ollimuh@googlemail.com): Spike detection
+- [Martino Sorbaro](http://martinosorb.github.io): Spike sorting
+- [Cesar Juarez Ramirez](mailto:cesaripn2@gmail.com): Visualisation toolkit
