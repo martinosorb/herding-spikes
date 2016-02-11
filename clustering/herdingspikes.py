@@ -405,8 +405,8 @@ class spikeclass(object):
         if self.NData() > 1000000:
             print(str(self.NData()) + \
                 " spikes, using 1Mio shapes randomly sampled...")
-            # inds = np.random.choice(self.NData(), 1000000, replace=False)
-            # tf = p.fit(self.Shapes()[:, inds].T)
+            inds = np.random.choice(self.NData(), 1000000, replace=False)
+            tf = p.fit(self.Shapes()[:, inds].T)
             # compute projections
             fit = p.transform(self.Shapes().T).T
         else:
