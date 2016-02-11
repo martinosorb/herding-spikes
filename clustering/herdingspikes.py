@@ -673,3 +673,33 @@ class spikeclass(object):
             clwidth[n] = np.std(np.sqrt((self.__data[0, inds]-centre[0])**2 +
                                         (self.__data[1, inds]-centre[1])**2))
         return clwidth
+
+class SVNClassifier(object):
+    def __init__(self, spikeobj):
+        self.spikeobj = spikeobj
+
+    def BadShapesByDensity(self, nbins=[64,64],
+                           percentile=0.5,
+                           maxn=None,
+                           min_thr=5,
+                           normalise=False):
+        l = self.spikeobj.Locations() + 0.5 # remove +0.5 at some point
+        hg, bx, by = np.histogram2d(l[0], l[1], nbins)
+        mindensity = np.min(hg[hg>0])
+        density_thr = np.max((np.percentile(hg.flatten(), percentile),
+                             mindensity + min_thr)) # +5 is also arbitrary!
+        binspanx = (np.max(l[0]) - np.min(l[0]))/nbins[0]*1.001
+        binspany = (np.max(l[1]) - np.min(l[1]))/nbins[1]*1.001
+        nbx = ((l[0] - np.min(l[0])) // binspanx).astype(int)
+        nby = ((l[1] - np.min(l[1])) // binspany).astype(int)
+        indbad = np.where(hg[nbx, nby] <= densitythreshold)[0]
+        if maxn is not None:
+            indbad = np.sort(np.random.permutation(indbad)[:maxn])
+        if normalise:
+            normed = lambda X: X/np.max(np.abs(X), axis=0)
+            badshape = np.median(normed(O.Shapes()[:, indbad]), axis=1)
+        else:
+            badshape = np.median(O.Shapes()[:, indbad], axis=1)
+        print("Classifier is based on " + str(len(indbad)) + \
+              " examples of bad shapes ")
+        return badshape
