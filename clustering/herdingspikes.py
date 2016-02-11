@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ms_new_withmp import MeanShift
 from sklearn.decomposition import PCA
+from sklearn import svm
 from scipy.stats import itemfreq
 from multiprocessing import cpu_count
 import h5py
@@ -608,50 +609,6 @@ class spikeclass(object):
             self.__backup[2], self.__backup[3], self.__backup[4]
 
 # OTHER
-
-    def CreateClassifier(self,
-                         nbins=[60, 60],
-                         densitythreshold=100,
-                         ampthreshold=7):
-        """ Creates a classifier to distinguish between noise and
-        true spike shapes. This is based on the assumption that areas
-        with very low spike density contain noise.
-
-        Arguments:
-        nbins -- Array with the number of bins in x and y to
-        evaluate spike density.
-        densitythreshold -- Bins with fewer spikes are assumed noise.
-        ampthreshold -- Spikes with at least this amplitude
-        are assumed true spikes.
-
-        Returns:
-        classifier -- The difference between shapes of true spikes and noise.
-        badshape -- The average shape of a noise event.
-        goodshape -- The average shape of a true spike.
-        """
-
-        hg, bx, by = np.histogram2d(self.__data[0], self.__data[1], nbins)
-        binspanx = (np.max(self.__data[0]) -
-                    np.min(self.__data[0]))/nbins[0]*1.001
-        binspany = (np.max(self.__data[1]) -
-                    np.min(self.__data[1]))/nbins[1]*1.001
-        nbx = ((self.__data[0] - np.min(self.__data[0])) //
-               binspanx).astype(int)
-        nby = ((self.__data[1] - np.min(self.__data[1])) //
-               binspany).astype(int)
-        ind = np.where(hg[nbx, nby] <= densitythreshold)[0]
-        # nBad = len(ind)
-        print("Classifier is based on " + str(len(ind)) + \
-            " examples of bad shapes.")
-        normalise = lambda X: X/np.max(np.abs(X), axis=0)
-        badshape = np.median(normalise(self.Shapes()[:, ind]), axis=1)
-        fakeampl = np.max(np.abs(self.Shapes()), axis=0)
-        ind = np.where(fakeampl > ampthreshold)[0]
-        print("and " + str(len(ind)) + " examples of good shapes.")
-        goodshape = np.median(normalise(self.Shapes()[:, ind]), axis=1)
-        classifier = .5*(goodshape-badshape)
-        return classifier, badshape, goodshape
-
     def ClusterWidth(self):
         """Compute the spread of spikes within each cluster. This can be
         used to distinguish well centred clusters from those where spike
@@ -674,7 +631,8 @@ class spikeclass(object):
                                         (self.__data[1, inds]-centre[1])**2))
         return clwidth
 
-class SVNClassifier(object):
+# A separate class to build a classifier.
+class ShapeClassifier(object):
     def __init__(self, spikeobj):
         self.spikeobj = spikeobj
 
@@ -692,14 +650,47 @@ class SVNClassifier(object):
         binspany = (np.max(l[1]) - np.min(l[1]))/nbins[1]*1.001
         nbx = ((l[0] - np.min(l[0])) // binspanx).astype(int)
         nby = ((l[1] - np.min(l[1])) // binspany).astype(int)
-        indbad = np.where(hg[nbx, nby] <= densitythreshold)[0]
+        indbad = np.where(hg[nbx, nby] <= density_thr)[0]
         if maxn is not None:
             indbad = np.sort(np.random.permutation(indbad)[:maxn])
         if normalise:
             normed = lambda X: X/np.max(np.abs(X), axis=0)
-            badshape = np.median(normed(O.Shapes()[:, indbad]), axis=1)
+            badshape = np.median(normed(self.spikeobj.Shapes()[:, indbad]),
+                                 axis=1)
         else:
-            badshape = np.median(O.Shapes()[:, indbad], axis=1)
-        print("Classifier is based on " + str(len(indbad)) + \
-              " examples of bad shapes ")
-        return badshape
+            badshape = np.median(self.spikeobj.Shapes()[:, indbad], axis=1)
+        print("Working with " + str(len(indbad)) + \
+              " examples of bad shapes.")
+        return badshape, indbad
+
+    def GoodShapesByAmplitude(self, amp_thr, maxn=None, normalise=False):
+        fakeampl = -np.min(self.spikeobj.Shapes(), axis=0)
+        indgood = np.where(fakeampl > amp_thr)[0]
+        if maxn is not None:
+            indgood = np.sort(np.random.permutation(indgood)[:maxn])
+        print("Working with " + str(len(indgood)) + \
+              " examples of good shapes.")
+        if normalise:
+            normed = lambda X: X/np.max(np.abs(X), axis=0)
+            goodshape = np.median(normed(self.spikeobj.Shapes()[:, indgood]),
+                                         axis=1)
+        else:
+            goodshape = np.median((self.spikeobj.Shapes()[:, indgood]), axis=1)
+        return goodshape, indgood
+
+    def FitClassifier(self, pcascores, indgood, indbad):
+        # create a matrix of waveform PC projections
+        pcs = np.hstack((pcascores[:, indbad], pcascores[:, indgood]))
+        # the training labels
+        # WHY do we use 0 and 1 instead of projections of some kind?
+        labels = np.append(np.zeros(len(indbad)), np.ones(len(indgood)))
+        # fit the classifier
+        classifier = svm.SVC(kernel='rbf', class_weight='balanced')
+        # use this for sklearn <0.17
+        #classifier = svm.SVC(kernel='rbf',class_weight='auto')
+        classifier.fit(pcs.T, labels)
+        # get the labels for the whole data set
+        score = classifier.predict(pcascores.T).astype(int)
+        print("Classified as bad: "+str(np.sum(score==0)) + \
+              ", and as good: "+str(np.sum(score==1)))
+        return score
