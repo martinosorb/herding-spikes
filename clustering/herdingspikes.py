@@ -198,6 +198,9 @@ class spikeclass(object):
         if save is not None:
             plt.savefig(save)
 
+    def SpikesInCluster(self, c):
+        return self.__ClusterID == c
+
     def ShapesPlot(self, clusters=None, save=None):
         """Plots the shapes of up to 12 clusters."""
         if clusters is None:
@@ -212,11 +215,10 @@ class spikeclass(object):
         ax.grid(which='major', axis='y', linewidth=1,
                 linestyle='-', color='0.75')
 
-        clShapes = lambda c: self.__shapes[:, self.__ClusterID == c]
         sl = 1.0*np.shape(self.__shapes)[0]
 
         for ic, c in enumerate(clusters):
-            myShapes = clShapes(c)
+            myShapes = self.__shapes[:, self.SpikesInCluster(c)]
             plInds = range(np.min([30, myShapes.shape[1]]))
             [plt.plot(ic+np.arange(sl)/sl-.5, myShapes[:, i],
              color=self.Colours()[c], alpha=0.2) for i in plInds]
@@ -296,31 +298,33 @@ class spikeclass(object):
         """Returns a pair of indices denoting the start and end
         of an experiment. Can currently only be used if data from multiple
         experiments is read with the helper function ImportInterpolatedList."""
-        if i+1 < len(self.__expinds):
-            final = self.__expinds[i+1]
-        elif i+1 == len(self.__expinds):
-            final = self.NData()
-        else:
-            raise ValueError('There are only ' + len(self.__expinds) +
-                             ' datasets.')
-        return np.arange(self.__expinds[i], self.__expinds[i+1])
+        raise NotImplementedError()
+        # if i+1 < len(self.__expinds):
+        #     final = self.__expinds[i+1]
+        # elif i+1 == len(self.__expinds):
+        #     final = self.NData()
+        # else:
+        #     raise ValueError('There are only ' + len(self.__expinds) +
+        #                      ' datasets.')
+        # return np.arange(self.__expinds[i], self.__expinds[i+1])
 
     def ClusterIndices(self, n, exper=None):
+        raise NotImplementedError()
         # TO BE TESTED
-        idx = np.where(self.__ClusterID == n)[0]
-        if exper is not None:
-            if exper + 1 < len(self.__indices):
-                endind = self.__expinds[i+1]
-                startind = self.__expinds[i]
-            elif exper + 1 == len(self.__indices):
-                endind = self.NData()
-                startind = self.__expinds[i]
-            else:
-                raise ValueError('There are only ' + len(self.__indices) +
-                                 ' datasets.')
-            idx = idx[idx >= startind]
-            idx = idx[idx < endind]
-        return idx
+        # idx = np.where(self.__ClusterID == n)[0]
+        # if exper is not None:
+        #     if exper + 1 < len(self.__indices):
+        #         endind = self.__expinds[i+1]
+        #         startind = self.__expinds[i]
+        #     elif exper + 1 == len(self.__indices):
+        #         endind = self.NData()
+        #         startind = self.__expinds[i]
+        #     else:
+        #         raise ValueError('There are only ' + len(self.__indices) +
+        #                          ' datasets.')
+        #     idx = idx[idx >= startind]
+        #     idx = idx[idx < endind]
+        # return idx
 
     def ExperimentHeads(self):
         return self.__expinds
@@ -377,9 +381,9 @@ class spikeclass(object):
             self.Shapes(),
             [0, 0, self.Shapes().shape[0], self.Shapes().shape[0]],
             0, axis=0)
-        for d in np.arange(-2,2):
+        for d in np.arange(-2, 2):
             idxd = peaks == d
-            alShapes[:,idxd] = np.roll(alShapes[:,idxd],d,axis=0)    
+            alShapes[:, idxd] = np.roll(alShapes[:, idxd], d, axis=0)
         self.LoadShapes(alShapes)
 
     def ShapePCA(self, ncomp=None, white=False):
@@ -399,8 +403,8 @@ class spikeclass(object):
         if self.NData() > 1000000:
             print str(self.NData()) + \
                 " spikes, using 1Mio shapes randomly sampled...",
-            inds = np.random.choice(self.NData(), 1000000, replace=False)
-            tf = p.fit(self.Shapes()[:, inds].T)
+            # inds = np.random.choice(self.NData(), 1000000, replace=False)
+            # tf = p.fit(self.Shapes()[:, inds].T)
             # compute projections
             fit = p.transform(self.Shapes().T).T
         else:
@@ -410,7 +414,10 @@ class spikeclass(object):
         stdout.flush()
         return fit
 
-    def CombinedMeanShift(self, h, alpha, PrincComp=None, njobs=cpu_count(), mbf=1):
+    def CombinedMeanShift(self, h, alpha,
+                          PrincComp=None,
+                          njobs=cpu_count(),
+                          mbf=1):
         """Performs the scikit-learn Mean Shift clustering.
 
         Arguments:
@@ -629,7 +636,7 @@ class spikeclass(object):
         nby = ((self.__data[1] - np.min(self.__data[1])) //
                binspany).astype(int)
         ind = np.where(hg[nbx, nby] <= densitythreshold)[0]
-        nBad = len(ind)
+        # nBad = len(ind)
         print "Classifier is based on " + str(len(ind)) + \
             " examples of bad shapes."
         normalise = lambda X: X/np.max(np.abs(X), axis=0)
