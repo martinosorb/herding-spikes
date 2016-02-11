@@ -69,8 +69,9 @@ def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0):
     return bandwidth / X.shape[0]
 
 #separate function for each seed's iterative loop
-def _mean_shift_single_seed((my_mean,X,nbrs,max_iter)):
+def _mean_shift_single_seed(argtuple):
     # For each seed, climb gradient until convergence or max_iter
+    (my_mean,X,nbrs,max_iter) = argtuple
     bandwidth = nbrs.get_params()['radius']
     stop_thresh = 1e-3 * bandwidth  # when mean has converged
     completed_iterations = 0

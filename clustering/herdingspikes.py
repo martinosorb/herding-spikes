@@ -5,6 +5,7 @@ Created on Tue Sep 23 11:17:38 2014
 @author: Martino Sorbaro
 @author: Matthias Hennig
 """
+from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 from ms_new_withmp import MeanShift
@@ -43,7 +44,7 @@ def ImportInterpolatedList(filenames, shapesupto=22):
     s = np.zeros(len(filenames))
     for i, f in enumerate(filenames):
         g = h5py.File(f, 'r')
-        print f
+        print(f)
         loc = np.append(loc, g['Locations'].value.T, axis=1)
         inds[i] = len(t)  # store index of first spike
         t = np.append(t, np.floor(g['Times'].value).astype(int))
@@ -178,8 +179,9 @@ class spikeclass(object):
         if save is not None:
             plt.savefig(save)
 
-    def PartPlot(self, (x1, x2, y1, y2), save=None):
+    def PartPlot(self, rectangle, save=None):
         """Plots a portion of the space. Doesn't work prior to clustering."""
+        (x1, x2, y1, y2) = rectangle
         ratio = (x2-x1)/(y2-y1)
         plt.figure(figsize=(12*ratio, 12))
         ax = plt.subplot(121)
@@ -359,13 +361,13 @@ class spikeclass(object):
         kwargs are passed to the MeanShift class."""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
                        min_bin_freq=1, n_jobs=njobs)
-        print "Starting sklearn Mean Shift... ",
+        print("Starting sklearn Mean Shift... ")
         stdout.flush()
         MS.fit_predict(self.__data.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
-        print self.__c
-        print "done."
+        print(self.__c)
+        print("done.")
         stdout.flush()
 
     def AlignShapes(self):
@@ -397,20 +399,20 @@ class spikeclass(object):
         ncomp -- the number of components to return
         white -- Perform whitening of data if set to True"""
 
-        print "Starting sklearn PCA...",
+        print("Starting sklearn PCA...")
         stdout.flush()
         p = PCA(n_components=ncomp, whiten=white)
         if self.NData() > 1000000:
-            print str(self.NData()) + \
-                " spikes, using 1Mio shapes randomly sampled...",
+            print(str(self.NData()) + \
+                " spikes, using 1Mio shapes randomly sampled...")
             # inds = np.random.choice(self.NData(), 1000000, replace=False)
             # tf = p.fit(self.Shapes()[:, inds].T)
             # compute projections
             fit = p.transform(self.Shapes().T).T
         else:
-            print "using all "+str(self.NData())+" shapes...",
+            print("using all "+str(self.NData())+" shapes...")
             fit = p.fit_transform(self.Shapes().T).T
-        print "done."
+        print("done.")
         stdout.flush()
         return fit
 
@@ -432,13 +434,13 @@ class spikeclass(object):
                        min_bin_freq=mbf, n_jobs=njobs)
         if PrincComp is None:
             PrincComp = self.ShapePCA(2)
-        print "Starting sklearn Mean Shift... ",
+        print("Starting sklearn Mean Shift... ")
         stdout.flush()
         fourvector = np.vstack((self.__data, alpha*PrincComp))
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T  # [0:1]
-        print "done."
+        print("done.")
         stdout.flush()
 
 # FILTERS
@@ -509,9 +511,10 @@ class spikeclass(object):
               ' datapoints.')
         return d_ind_kept
 
-    def CropClusters(self, (xmin, xmax, ymin, ymax), outside=False):
+    def CropClusters(self, rectangle, outside=False):
         """Keeps only datapoints belonging to clusters whose centres are
         inside the relevant window, or outside, if outside=True is passed."""
+        (xmin, xmax, ymin, ymax) = rectangle
         self.Backup()
         numclus = self.NClusters()
         initialdata = self.NData()
@@ -538,9 +541,10 @@ class spikeclass(object):
               ' datapoints.')
         return d_ind_kept
 
-    def Crop(self, (xmin, xmax, ymin, ymax), outside=False):
+    def Crop(self, rectangle, outside=False):
         """Keeps only datapoints inside the relevant window,
         or outside, if outside=True is passed."""
+        (xmin, xmax, ymin, ymax) = rectangle
         self.Backup()
         dx, dy = self.__data
         numclus = self.NClusters()
@@ -576,7 +580,7 @@ class spikeclass(object):
         if len(self.__expinds) > 1:
             for n, i in enumerate(self.__expinds[1:]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
-            print 'New experiment indices: '+str(self.__expinds)
+            print('New experiment indices: '+str(self.__expinds))
 
     def KeepOnly(self, ind_kept):
         """This is used to remove datapoints that were filtered out
@@ -637,13 +641,13 @@ class spikeclass(object):
                binspany).astype(int)
         ind = np.where(hg[nbx, nby] <= densitythreshold)[0]
         # nBad = len(ind)
-        print "Classifier is based on " + str(len(ind)) + \
-            " examples of bad shapes."
+        print("Classifier is based on " + str(len(ind)) + \
+            " examples of bad shapes.")
         normalise = lambda X: X/np.max(np.abs(X), axis=0)
         badshape = np.median(normalise(self.Shapes()[:, ind]), axis=1)
         fakeampl = np.max(np.abs(self.Shapes()), axis=0)
         ind = np.where(fakeampl > ampthreshold)[0]
-        print "and " + str(len(ind)) + " examples of good shapes."
+        print("and " + str(len(ind)) + " examples of good shapes.")
         goodshape = np.median(normalise(self.Shapes()[:, ind]), axis=1)
         classifier = .5*(goodshape-badshape)
         return classifier, badshape, goodshape
