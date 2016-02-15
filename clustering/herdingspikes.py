@@ -404,10 +404,10 @@ class spikeclass(object):
         stdout.flush()
         p = PCA(n_components=ncomp, whiten=white)
         if self.NData() > 1000000:
-            print(str(self.NData()) + \
-                " spikes, using 1Mio shapes randomly sampled...")
+            print(str(self.NData()) +
+                  " spikes, using 1Mio shapes randomly sampled...")
             inds = np.random.choice(self.NData(), 1000000, replace=False)
-            tf = p.fit(self.Shapes()[:, inds].T)
+            p.fit(self.Shapes()[:, inds].T)
             # compute projections
             fit = p.transform(self.Shapes().T).T
         else:
@@ -631,21 +631,22 @@ class spikeclass(object):
                                         (self.__data[1, inds]-centre[1])**2))
         return clwidth
 
+
 # A separate class to build a classifier.
 class ShapeClassifier(object):
     def __init__(self, spikeobj):
         self.spikeobj = spikeobj
 
-    def BadShapesByDensity(self, nbins=[64,64],
+    def BadShapesByDensity(self, nbins=[64, 64],
                            percentile=0.5,
                            maxn=None,
                            min_thr=5,
                            normalise=False):
-        l = self.spikeobj.Locations() + 0.5 # remove +0.5 at some point
+        l = self.spikeobj.Locations() + 0.5  # remove +0.5 at some point
         hg, bx, by = np.histogram2d(l[0], l[1], nbins)
-        mindensity = np.min(hg[hg>0])
+        mindensity = np.min(hg[hg > 0])
         density_thr = np.max((np.percentile(hg.flatten(), percentile),
-                             mindensity + min_thr)) # +5 is also arbitrary!
+                             mindensity + min_thr))  # +5 is also arbitrary!
         binspanx = (np.max(l[0]) - np.min(l[0]))/nbins[0]*1.001
         binspany = (np.max(l[1]) - np.min(l[1]))/nbins[1]*1.001
         nbx = ((l[0] - np.min(l[0])) // binspanx).astype(int)
@@ -659,7 +660,7 @@ class ShapeClassifier(object):
                                  axis=1)
         else:
             badshape = np.median(self.spikeobj.Shapes()[:, indbad], axis=1)
-        print("Working with " + str(len(indbad)) + \
+        print("Working with " + str(len(indbad)) +
               " examples of bad shapes.")
         return badshape, indbad
 
@@ -668,12 +669,12 @@ class ShapeClassifier(object):
         indgood = np.where(fakeampl > amp_thr)[0]
         if maxn is not None:
             indgood = np.sort(np.random.permutation(indgood)[:maxn])
-        print("Working with " + str(len(indgood)) + \
+        print("Working with " + str(len(indgood)) +
               " examples of good shapes.")
         if normalise:
             normed = lambda X: X/np.max(np.abs(X), axis=0)
             goodshape = np.median(normed(self.spikeobj.Shapes()[:, indgood]),
-                                         axis=1)
+                                  axis=1)
         else:
             goodshape = np.median((self.spikeobj.Shapes()[:, indgood]), axis=1)
         return goodshape, indgood
@@ -687,10 +688,10 @@ class ShapeClassifier(object):
         # fit the classifier
         classifier = svm.SVC(kernel='rbf', class_weight='balanced')
         # use this for sklearn <0.17
-        #classifier = svm.SVC(kernel='rbf',class_weight='auto')
+        # classifier = svm.SVC(kernel='rbf',class_weight='auto')
         classifier.fit(pcs.T, labels)
         # get the labels for the whole data set
         score = classifier.predict(pcascores.T).astype(int)
-        print("Classified as bad: "+str(np.sum(score==0)) + \
-              ", and as good: "+str(np.sum(score==1)))
+        print("Classified as bad: "+str(np.sum(score == 0)) +
+              ", and as good: "+str(np.sum(score == 1)))
         return score
