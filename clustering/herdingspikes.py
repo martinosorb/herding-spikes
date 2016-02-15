@@ -8,11 +8,10 @@ Created on Tue Sep 23 11:17:38 2014
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
-from ms_new_withmp import MeanShift
+from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
 from sklearn import svm
 from scipy.stats import itemfreq
-from multiprocessing import cpu_count
 import h5py
 import warnings
 from sys import stdout
@@ -357,19 +356,19 @@ class spikeclass(object):
 
 # CLUSTERING AND ANALYSIS
 
-    def MeanShift(self, h, njobs=cpu_count()):
-        """Performs the scikit-learn Mean Shift clustering.
-        kwargs are passed to the MeanShift class."""
-        MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
-                       min_bin_freq=1, n_jobs=njobs)
-        print("Starting sklearn Mean Shift... ")
-        stdout.flush()
-        MS.fit_predict(self.__data.T)
-        self.__ClusterID = MS.labels_
-        self.__c = MS.cluster_centers_.T
-        print(self.__c)
-        print("done.")
-        stdout.flush()
+    # def MeanShift(self, h, njobs=cpu_count()):
+    #     """Performs the scikit-learn Mean Shift clustering.
+    #     kwargs are passed to the MeanShift class."""
+    #     MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
+    #                    min_bin_freq=1, n_jobs=njobs)
+    #     print("Starting sklearn Mean Shift... ")
+    #     stdout.flush()
+    #     MS.fit_predict(self.__data.T)
+    #     self.__ClusterID = MS.labels_
+    #     self.__c = MS.cluster_centers_.T
+    #     print(self.__c)
+    #     print("done.")
+    #     stdout.flush()
 
     def AlignShapes(self):
         # Todo: optimise!
@@ -419,7 +418,7 @@ class spikeclass(object):
 
     def CombinedMeanShift(self, h, alpha,
                           PrincComp=None,
-                          njobs=cpu_count(),
+                          njobs=-2,
                           mbf=1):
         """Performs the scikit-learn Mean Shift clustering.
 
@@ -429,7 +428,7 @@ class spikeclass(object):
         alpha -- the weight of the principal components as compared
         to the spatial data.
         PrincComp -- used to pass already-computed principal components
-        njobs -- the number of processes to be used (default: cpu_count())
+        njobs -- the number of processes to be used (default: n. of CPU - 1)
         mbf -- the minimum number of items in a seed"""
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
                        min_bin_freq=mbf, n_jobs=njobs)
