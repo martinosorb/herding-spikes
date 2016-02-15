@@ -8,6 +8,7 @@ Created on Tue Sep 23 11:17:38 2014
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import __version__ as skvers
 from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
 from sklearn import svm
@@ -15,6 +16,9 @@ from scipy.stats import itemfreq
 import h5py
 import warnings
 from sys import stdout
+
+if float(skvers) < 0.17:
+    raise Warning('Sklearn version >= 0.17 may be needed')
 
 
 def ImportInterpolated(filename, shapesupto=None):
@@ -694,3 +698,10 @@ class ShapeClassifier(object):
         print("Classified as bad: "+str(np.sum(score == 0)) +
               ", and as good: "+str(np.sum(score == 1)))
         return score
+
+
+class QualityMeasures(object):
+    def __init__(self, spikeobj):
+        if np.size(spikeobj.ClusterID()) == 0:
+            raise ValueError('No clustering was performed')
+        self.spikeobj = spikeobj
