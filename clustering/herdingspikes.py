@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from sklearn import __version__ as skvers
 from sklearn.cluster import MeanShift
 from sklearn.decomposition import PCA
-from sklearn import svm
+from sklearn import svm, mixture
+from sklearn.metrics.pairwise import euclidean_distances
 from scipy.stats import itemfreq
 import h5py
 import warnings
@@ -705,3 +706,114 @@ class QualityMeasures(object):
         if np.size(spikeobj.ClusterID()) == 0:
             raise ValueError('No clustering was performed')
         self.spikeobj = spikeobj
+
+    def Neighbours(self, cl_idx, d, min_neigh_size=0):
+        clocs = self.spikeobj.ClusterLoc()
+        clsizes = self.spikeobj.ClusterSizes()
+        dists = (clocs[0] - clocs[0, cl_idx])**2 + \
+                (clocs[1] - clocs[1, cl_idx])**2
+        return np.where((dists > 0) & (dists < d**2) &
+                        (clsizes >= min_neigh_size))[0]
+
+    def GaussianOverlapPair(self, clnumbers, mode="all"):
+        fourvector = np.vstack((self.spikeobj.Locations(), scorePCA[:4, :]))
+        spLabels = self.spikeobj.ClusterID()
+        inds = []
+        for j in clnumbers:
+            inds.append(np.where(spLabels == clIDs[j])[0])
+        return self._gaussian_overlap(data)
+
+    def _data_gaussian_overlap(p):
+        '''
+        Fit a len(p)-component Gaussin mixture model to a set of clusters,
+        estimate the cluster overlap and return a matrix containing estimated
+        false positives and negatives.
+
+        Data is provided as list in p, each an array containing PCA pojections
+        or locations or both.
+
+        This method is based on:
+        Hill, Daniel N., Samar B. Mehta, and David Kleinfeld.
+        Quality metrics to accompany spike sorting of extracellular signals.
+        Journal of Neuroscience 31.24 (2011): 8699-8705.
+
+        From the original description by Hill et al.:
+        The percent of false positive and false negative errors are estimated
+        for both classes and stored as a confusion matrix. Error rates are
+        calculated by integrating the posterior probability of a
+        misclassification. The integral is then normalized by the number of
+        events in the cluster of interest.
+
+        Returns:
+        confusion - a confusion matrix, diagonals have fase positive, and
+        off-diagonals false negatives
+        '''
+
+        ncl = len(p)
+        # pre-compute means and covariance matrices
+        estCent = np.array([np.median(p[i], axis=0) for i in range(len(p))])
+        estCov = np.array([np.cov(p[i].T) for i in range(len(p))])
+        g = mixture.GMM(n_components=ncl, covariance_type='full',
+                        params='wmc', init_params='w',
+                        min_covar=1e-2, tol=1e-3)
+        g.means_ = np.vstack(estCent)
+        g.covars_ = estCov
+        data = np.concatenate(p)
+        g.fit(data)
+        if g.converged_ is False:
+            print("not converged")
+
+        # get posterior probabilities
+        pr = []
+        for i in range(ncl):
+            pr.append(g.predict_proba(p[i]))
+
+        # get indices in case clusters are mixed up
+        # assign each GMM cluster to the nearest cluster the first two dims
+        pInds = np.zeros(ncl, dtype=int)
+        d = euclidean_distances(np.vstack(estCent)[:, :2], g.means_[:, :2])
+        for i in range(ncl):
+            ind = np.argmin(d)
+            pInds[np.floor(ind/ncl)] = ind % ncl
+            d[:, ind % ncl] = 10
+            d[np.floor(ind/ncl)] = 10
+
+        # compute the confusion matrix entries
+        confusion = np.zeros((ncl, ncl))
+        for i in range(ncl):
+            # FP
+            confusion[pInds[i], pInds[i]] = np.sum(
+                np.mean(pr[i][:, np.setxor1d(i, range(ncl))], axis=0))
+            # FNs
+            for j in np.setxor1d(i, range(0, ncl)):
+                confusion[pInds[i], pInds[j]] = np.sum(pr[j][:, i])/len(p[i])
+
+        # if plotResult is True:  # plot the result
+        #     ax = plt.gca()
+        #     nShow = 500
+        #     for i in range(ncl):
+        #         plt.scatter(p[i][:nShow,pltDims[0]], p[i][:nShow,pltDims[1]],
+        #        s=2,color=colors[2*i],label=str(np.round(confusion[i,i],3)))
+        #     leg = plt.legend(loc=1, ncol=1,frameon=False,fontsize=14,
+        #                      handlelength=0,handleheight=0,columnspacing=0.2,handletextpad=0)
+        #     for i, txt in enumerate( leg.get_texts()):
+        #         txt.set_color(colors[2*i])
+        #     for item in leg.legendHandles:
+        #         item.set_visible(False)
+        #     plt.axis('equal')
+        #     for i in range(ncl):
+        #         v, w = np.linalg.eigh(g._get_covars()[pInds[i]][slice(
+        #            pltDims[0],pltDims[1]+1),slice(pltDims[0],pltDims[1]+1)])
+        #         u = w[0] / np.linalg.norm(w[0])
+        #         angle = np.arctan2(u[1], u[0])
+        #         angle = 180 * angle / np.pi  # convert to degrees
+        #         v *= 9./2
+        #         ell = mpl.patches.Ellipse(g.means_[pInds[i], pltDims], v[0],
+        #            v[1], 180 + angle, color=colors[2*i])
+        #         ell.set_clip_box(ax.bbox)
+        #         ell.set_linewidth(0.7)
+        #         ell.set_edgecolor('k')
+        #         ell.set_alpha(0.55)
+        #         ax.add_artist(ell)
+
+        return confusion
