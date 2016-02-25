@@ -516,14 +516,15 @@ class spikeclass(object):
               ' datapoints.')
         return d_ind_kept
 
-    def CropClusters(self, rectangle, outside=False):
+    def CropClusters(self, rectangle, outside=False, remove=True):
         """Keeps only datapoints belonging to clusters whose centres are
-        inside the relevant window, or outside, if outside=True is passed."""
+        inside the relevant window, or outside, if outside=True is passed.
+        If remove=False, returns the IDs of the clusters in the area,
+        without removing the rest."""
         (xmin, xmax, ymin, ymax) = rectangle
-        self.Backup()
         numclus = self.NClusters()
         initialdata = self.NData()
-        cx, cy = self.__c
+        cx, cy = self.__c[:2]
         # create a conversion table to get rid of gaps in cluster IDs
         if not outside:
             condition = [x & y & z & w for (x, y, z, w) in
@@ -532,25 +533,31 @@ class spikeclass(object):
             condition = [-(x & y & z & w) for (x, y, z, w) in
                          zip(cx <= xmax, cx >= xmin, cy <= ymax, cy >= ymin)]
         c_ind_kept = np.where(condition)[0]
-        newID = -np.ones(numclus, dtype=np.int)
-        newID[c_ind_kept] = np.array(range(len(c_ind_kept)))
-        # update temporarily the ClusterID vector
-        self.__ClusterID = newID[self.__ClusterID]
-        # delete data whose cluster was deleted, and clusters
-        d_ind_kept = np.where(self.__ClusterID != -1)[0]
-        self.KeepOnly(d_ind_kept)
-        self.__ClusterID = self.__ClusterID[d_ind_kept]
-        self.__c = self.__c[:, c_ind_kept]
-        print('CropClusters removed ' + str(numclus-self.NClusters()) +
-              ' clusters and ' + str(initialdata-self.NData()) +
-              ' datapoints.')
-        return d_ind_kept
+        if remove:
+            newID = -np.ones(numclus, dtype=np.int)
+            newID[c_ind_kept] = np.array(range(len(c_ind_kept)))
+            self.Backup()
+            # update temporarily the ClusterID vector
+            self.__ClusterID = newID[self.__ClusterID]
+            # delete data whose cluster was deleted, and clusters
+            d_ind_kept = np.where(self.__ClusterID != -1)[0]
+            self.KeepOnly(d_ind_kept)
+            self.__ClusterID = self.__ClusterID[d_ind_kept]
+            self.__c = self.__c[:, c_ind_kept]
+            print('CropClusters removed ' + str(numclus-self.NClusters()) +
+                  ' clusters and ' + str(initialdata-self.NData()) +
+                  ' datapoints.')
+        return c_ind_kept
 
-    def Crop(self, rectangle, outside=False):
+    def Crop(self, rectangle, outside=False, remove=True):
         """Keeps only datapoints inside the relevant window,
-        or outside, if outside=True is passed."""
+        or outside, if outside=True is passed.
+
+        If remove=False, returns but doesn't remove the spikes.
+
+        Returns: the indices of spikes and of clusters in the area."""
         (xmin, xmax, ymin, ymax) = rectangle
-        self.Backup()
+
         dx, dy = self.__data
         numclus = self.NClusters()
         initialdata = self.NData()
@@ -561,21 +568,23 @@ class spikeclass(object):
             condition = [-(x & y & z & w) for (x, y, z, w) in zip(dx <= xmax,
                          dx >= xmin, dy <= ymax, dy >= ymin)]
         d_ind_kept = np.where(condition)[0]
-        if numclus:
-            cid_kept_all = self.__ClusterID[d_ind_kept]
-            c_ind_kept = np.unique(cid_kept_all)
-            newID = -np.ones(numclus, dtype=np.int)
-            newID[c_ind_kept] = np.array(range(len(c_ind_kept)))
-            # update temporarily the ClusterID vector
-            self.__ClusterID = newID[self.__ClusterID]
-            # delete data whose cluster was deleted, and clusters
-            self.__ClusterID = self.__ClusterID[d_ind_kept]
-            self.__c = self.__c[:, c_ind_kept]
-        self.KeepOnly(d_ind_kept)
-        print('Crop removed ' + str(numclus-self.NClusters()) +
-              ' clusters and ' + str(initialdata-self.NData()) +
-              ' datapoints.')
-        return d_ind_kept
+        cid_kept_all = self.__ClusterID[d_ind_kept]
+        c_ind_kept = np.unique(cid_kept_all)
+        if remove:
+            if numclus:
+                newID = -np.ones(numclus, dtype=np.int)
+                newID[c_ind_kept] = np.array(range(len(c_ind_kept)))
+                # update temporarily the ClusterID vector
+                self.__ClusterID = newID[self.__ClusterID]
+                # delete data whose cluster was deleted, and clusters
+                self.__ClusterID = self.__ClusterID[d_ind_kept]
+                self.__c = self.__c[:, c_ind_kept]
+            self.Backup()
+            self.KeepOnly(d_ind_kept)
+            print('Crop removed ' + str(numclus-self.NClusters()) +
+                  ' clusters and ' + str(initialdata-self.NData()) +
+                  ' datapoints.')
+        return d_ind_kept, c_ind_kept
 
 # UTILITY
 
@@ -634,6 +643,12 @@ class spikeclass(object):
             clwidth[n] = np.std(np.sqrt((self.__data[0, inds]-centre[0])**2 +
                                         (self.__data[1, inds]-centre[1])**2))
         return clwidth
+
+    def QualityMeasures(self, scorePCA=None, ncomp=None):
+        return QualityMeasures(self, scorePCA, ncomp)
+
+    def ShapeClassifier(self):
+        return ShapeClassifier(self)
 
 
 # A separate class to build a classifier.
@@ -702,10 +717,13 @@ class ShapeClassifier(object):
 
 
 class QualityMeasures(object):
-    def __init__(self, spikeobj):
+    def __init__(self, spikeobj, scorePCA=None, ncomp=None):
         if np.size(spikeobj.ClusterID()) == 0:
             raise ValueError('No clustering was performed')
         self.spikeobj = spikeobj
+        if scorePCA is None:
+            scorePCA = self.spikeobj.ShapePCA(ncomp=ncomp, white=True)
+        self.scorePCA = scorePCA
 
     def Neighbours(self, cl_idx, d, min_neigh_size=0):
         clocs = self.spikeobj.ClusterLoc()
@@ -715,21 +733,38 @@ class QualityMeasures(object):
         return np.where((dists > 0) & (dists < d**2) &
                         (clsizes >= min_neigh_size))[0]
 
-    def GaussianOverlapPair(self, clnumbers, mode="all"):
-        fourvector = np.vstack((self.spikeobj.Locations(), scorePCA[:4, :]))
+    def GaussianOverlapGroup(self, clnumbers, mode="both"):
+        fourvector = np.vstack((self.spikeobj.Locations(),
+                               self.scorePCA[:4, :]))
+        fstd = np.std(fourvector, axis=1)
+        fstd[:2] = 1
+        fmean = np.mean(fourvector, axis=1)
+        fmean[:2] = 0
         spLabels = self.spikeobj.ClusterID()
         inds = []
         for j in clnumbers:
-            inds.append(np.where(spLabels == clIDs[j])[0])
-        return self._gaussian_overlap(data)
+            inds.append(np.where(spLabels == j)[0])
+        data = []
+        if mode == "both":
+            for ind in inds:
+                data.append((fourvector[:, ind].T-fmean)/fstd.T)
+        elif mode == "XY":
+            for ind in inds:
+                data.append((fourvector[:2, ind].T-fmean[:2])/fstd[:2].T)
+        elif mode == "PCA":
+            for ind in inds:
+                data.append((fourvector[2:, ind].T-fmean[2:])/fstd[2:].T)
+        else:
+            raise ValueError("Acceptable modes are 'all', 'PCA' and 'XY'")
+        return self._gaussian_overlap(data)  # confusion matrix
 
     def _data_gaussian_overlap(p):
         '''
-        Fit a len(p)-component Gaussin mixture model to a set of clusters,
+        Fit a len(p)-component Gaussian mixture model to a set of clusters,
         estimate the cluster overlap and return a matrix containing estimated
         false positives and negatives.
 
-        Data is provided as list in p, each an array containing PCA pojections
+        Data is provided as list in p, each an array containing PCA projections
         or locations or both.
 
         This method is based on:
