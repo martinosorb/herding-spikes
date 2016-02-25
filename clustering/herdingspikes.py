@@ -184,26 +184,49 @@ class spikeclass(object):
         if save is not None:
             plt.savefig(save)
 
-    def PartPlot(self, rectangle, save=None):
-        """Plots a portion of the space. Doesn't work prior to clustering."""
-        (x1, x2, y1, y2) = rectangle
-        ratio = (x2-x1)/(y2-y1)
-        plt.figure(figsize=(12*ratio, 12))
-        ax = plt.subplot(121)
-        ax.grid(which='major', axis='x', linewidth=1,
-                linestyle='-', color='0.75')
-        ax.grid(which='major', axis='y', linewidth=1,
-                linestyle='-', color='0.75')
-        ax.set_xlim(x1, x2)
-        ax.set_ylim(y1, y2)
-        plt.scatter(self.__data[0], self.__data[1], marker='o', s=3,
-                    edgecolors='none',
-                    c=self.Colours()[self.__ClusterID])
+    # def PartPlot(self, rectangle, save=None):
+    #     """Plots a portion of the space. Doesn't work prior to clustering."""
+    #     (x1, x2, y1, y2) = rectangle
+    #     ratio = (x2-x1)/(y2-y1)
+    #     plt.figure(figsize=(12*ratio, 12))
+    #     ax = plt.subplot(121)
+    #     ax.grid(which='major', axis='x', linewidth=1,
+    #             linestyle='-', color='0.75')
+    #     ax.grid(which='major', axis='y', linewidth=1,
+    #             linestyle='-', color='0.75')
+    #     ax.set_xlim(x1, x2)
+    #     ax.set_ylim(y1, y2)
+    #     plt.scatter(self.__data[0], self.__data[1], marker='o', s=3,
+    #                 edgecolors='none',
+    #                 c=self.Colours()[self.__ClusterID])
+    #     ax.set_aspect('equal')
+    #     plt.xticks(np.arange(np.round(x1), np.ceil(x2)))
+    #     plt.yticks(np.arange(np.round(y1), np.ceil(y2)))
+    #     if save is not None:
+    #         plt.savefig(save)
+
+    def PlotRegion(self, dataWindow, save=None, show_max=None):
+        clInds = self.CropClusters(dataWindow, remove=False)
+        spInds, unique_spLabels = self.Crop(dataWindow, remove=False)
+        clocs = self.ClusterLoc()[:2, clInds]
+        unique_inds = self.ClusterID()[spInds]
+        plt.figure(figsize=(8, 8))
+        ax = plt.gca()
+        ax.set_axis_bgcolor('black')
+        if show_max is None:
+            show_max = len(spInds)
+        ax.scatter(self.__data[0, spInds[:show_max]],
+                   self.__data[1, spInds[:show_max]],
+                   c=self.Colours()[unique_inds[:show_max]], marker='o',
+                   s=4, edgecolors='none', alpha=0.8)
         ax.set_aspect('equal')
-        plt.xticks(np.arange(np.round(x1), np.ceil(x2)))
-        plt.yticks(np.arange(np.round(y1), np.ceil(y2)))
-        if save is not None:
-            plt.savefig(save)
+        if len(clInds) < 100:
+            clsizes = [np.sum(self.__ClusterID == c) for c in clInds]
+            for i, c in enumerate(clInds):
+                plt.annotate(s=str(i), xy=(clocs[0, i],
+                             clocs[1, i]), color='w')
+            plt.scatter(clocs[0], clocs[1], s=clsizes, alpha=0.5, c='grey')
+            plt.grid('off')
 
     def SpikesInCluster(self, c):
         return self.__ClusterID == c
