@@ -22,22 +22,22 @@ if float(skvers) < 0.17:
     raise Warning('Sklearn version >= 0.17 may be needed')
 
 
-def ImportInterpolated(filename, shapesupto=None):
+def ImportInterpolated(filename, shapesrange=None):
     """Helper function to read spike data from an hdf5 file."""
     g = h5py.File(filename, 'r')
     A = spikeclass(np.array(g['Locations'].value, dtype=float).T)
     A.LoadTimes(np.floor(g['Times'].value).astype(int))
     A.SetSampling(g['Sampling'].value)
-    if shapesupto is None:
+    if shapesrange is None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
-    elif shapesupto > 0:
-        A.LoadShapes(np.array(g['Shapes'].value).T[:shapesupto])
+    else:
+        A.LoadShapes(np.array(g['Shapes'].value).T[shapesrange[0]:shapesrange[1]])
     g.close()
     A._spikeclass__expinds = np.array([0])
     return A
 
 
-def ImportInterpolatedList(filenames, shapesupto=22):
+def ImportInterpolatedList(filenames, shapesrange=None):
     """ Helper function to read in spike data from a list of hdf5 files.
     Returns a class object which keeps track of the
     indices where each file begins.
@@ -45,22 +45,22 @@ def ImportInterpolatedList(filenames, shapesupto=22):
     loc = np.array([[], []], dtype=float)
     t = np.array([], dtype=int)
     sh = np.array([], dtype=int)
-    inds = np.zeros(len(filenames)+1, dtype=int)
+    inds = np.zeros(len(filenames) + 1, dtype=int)
     s = np.zeros(len(filenames))
     for i, f in enumerate(filenames):
         g = h5py.File(f, 'r')
-        print(f)
+        print('Reading file ' + f)
         loc = np.append(loc, g['Locations'].value.T, axis=1)
         inds[i] = len(t)  # store index of first spike
         t = np.append(t, np.floor(g['Times'].value).astype(int))
         s[i] = g['Sampling'].value
-        # if shapesupto == None:
-        #  sh = np.append(sh, np.array(g['Shapes'].value))
-        # elif shapesupto > 0:
-        sh = np.append(sh, np.array(g['Shapes'].value)[:, :shapesupto])
+        if shapesrange is None:
+            sh = np.append(sh, np.array(g['Shapes'].value))
+        else:
+            sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
-    sh = np.reshape(sh, (len(t), shapesupto))
+    sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
     if len(np.unique(s)) > 1:
         raise Warning('Data sets have different sampling rates\n' + str(s))
     A = spikeclass(loc)
@@ -121,7 +121,7 @@ class spikeclass(object):
             if np.shape(args[0]) != (2, ndata):
                 raise ValueError('Data must be a (2,N) array')
             self.__data = args[0]
-            self.__c = np.zeros([2, np.max(args[1])+1])
+            self.__c = np.zeros([2, np.max(args[1]) + 1])
             self.__ClusterID = np.array(args[1])
             self.__times = np.array([])
             self.__shapes = np.array([])
@@ -144,89 +144,92 @@ class spikeclass(object):
 
 # PLOTTING METHODS
 
-    def LogHistPlot(self, save=None):
+    def LogHistPlot(self, save=None, binstep=0.2, figsize=(8, 8), ax=None, inds=None):
         """Plots a density histogram."""
-        # fig,ax = plt.subplots()
-        # ax.imshow(np.log10(self.__hist),origin='lower',interpolation='none')
-        # plt.show()
-        plt.figure(figsize=(8, 8))
-        ax = plt.subplot(111)
+        if figsize is not None and ax is None:
+            plt.figure(figsize=figsize)
+        if ax is None:
+            ax = plt.subplot(111)
         ax.set_axis_bgcolor('black')
-        n, xb, yb = np.histogram2d(
-            self.__data[1], self.__data[0],
-            bins=(np.arange(0, 65, 0.2), np.arange(0, 65, 0.2)))
+        dr = np.array([self.__data[0].min(), self.__data[1].min(), self.__data[0].max(), self.__data[1].max()])
+        dr = np.hstack((np.floor(dr[:2]), np.ceil(dr[2:])))
+        if inds is None:
+            n, xb, yb = np.histogram2d(
+                self.__data[1], self.__data[0],
+                bins=(np.arange(dr[0], dr[2], binstep), np.arange(dr[1], dr[3], binstep)))
+        else:
+            n, xb, yb = np.histogram2d(
+                self.__data[1][inds], self.__data[0][inds],
+                bins=(np.arange(dr[0], dr[2], binstep), np.arange(dr[1], dr[3], binstep)))
+
         rateMasked = np.ma.array(n, mask=(n == 0))
         cmap = plt.cm.RdBu_r
         cmap.set_bad('k')
-        plt.pcolor(yb, xb, np.log(rateMasked), cmap=cmap)
+        # plt.imshow(yb, xb, np.log10(rateMasked), cmap=cmap)
+        plt.imshow(np.log10(rateMasked), cmap=cmap, extent=[xb.min(), xb.max(), yb.min(), yb.max()], interpolation='none', origin='lower')
         plt.axis('equal')
-        plt.xlim((0, 65))
-        plt.ylim((0, 65))
+        # plt.xlim((0, 65))
+        # plt.ylim((0, 65))
+        plt.xlim((xb.min(), xb.max()))
+        plt.ylim((yb.min(), yb.max()))
         if save is not None:
             plt.savefig(save)
+        return ax
 
-    def DataPlot(self, save=None):
+    def DataPlot(self, save=None, show_max=int(1e4), figsize=(8, 8), ax=None):
         """Plots the current data. If clustering was performed,
          the cluster centres and ID (colour) are plotted,
-         otherwise a black and white scatterplot is plotted"""
-        fig, ax = plt.subplots(figsize=(7, 7))
+         otherwise a black and white scatterplot is plotted."""
+
+        if figsize is not None and ax is None:
+            plt.figure(figsize=figsize)
+        if ax is None:
+            ax = plt.subplot(111)
         ax.set_axis_bgcolor('black')
+        dr = np.array([self.__data[0].min(), self.__data[1].min(), self.__data[0].max(), self.__data[1].max()])
+        dr = np.hstack((np.floor(dr[:2]), np.ceil(dr[2:])))
+        if show_max is None:
+            show_max = self.NData()
         if np.size(self.__ClusterID):
-            ax.scatter(self.__data[0], self.__data[1],
-                       c=self.Colours()[self.__ClusterID], marker='o',
-                       s=1, edgecolors='none', alpha=0.5)
+            ax.scatter(self.__data[0][:show_max], self.__data[1][:show_max],
+                       c=self.Colours()[self.__ClusterID[:show_max]], marker='o',
+                       s=2, edgecolors='none', alpha=0.8)
         else:
-            ax.scatter(self.__data[0], self.__data[1], marker=',',
-                       c='w', s=1, edgecolors='none', alpha=0.5)
+            ax.scatter(self.__data[0][:show_max], self.__data[1][:show_max], marker=',',
+                       c='w', s=2, edgecolors='none', alpha=0.8)
         ax.set_aspect('equal')
-        ax.set_xlim([min(self.__data[0]), max(self.__data[0])])
-        ax.set_ylim([min(self.__data[1]), max(self.__data[1])])
+        ax.set_xlim([dr[0], dr[2]])
+        ax.set_ylim([dr[1], dr[3]])
         if save is not None:
             plt.savefig(save)
+        return ax
 
-    # def PartPlot(self, rectangle, save=None):
-    #     """Plots a portion of the space. Doesn't work prior to clustering."""
-    #     (x1, x2, y1, y2) = rectangle
-    #     ratio = (x2-x1)/(y2-y1)
-    #     plt.figure(figsize=(12*ratio, 12))
-    #     ax = plt.subplot(121)
-    #     ax.grid(which='major', axis='x', linewidth=1,
-    #             linestyle='-', color='0.75')
-    #     ax.grid(which='major', axis='y', linewidth=1,
-    #             linestyle='-', color='0.75')
-    #     ax.set_xlim(x1, x2)
-    #     ax.set_ylim(y1, y2)
-    #     plt.scatter(self.__data[0], self.__data[1], marker='o', s=3,
-    #                 edgecolors='none',
-    #                 c=self.Colours()[self.__ClusterID])
-    #     ax.set_aspect('equal')
-    #     plt.xticks(np.arange(np.round(x1), np.ceil(x2)))
-    #     plt.yticks(np.arange(np.round(y1), np.ceil(y2)))
-    #     if save is not None:
-    #         plt.savefig(save)
-
-    def PlotRegion(self, dataWindow, save=None, show_max=None):
+    def PlotRegion(self, dataWindow, save=None, show_max=None, figsize=(8, 8), ax=None):
         clInds = self.CropClusters(dataWindow, remove=False)
         spInds, unique_spLabels = self.Crop(dataWindow, remove=False)
         clocs = self.ClusterLoc()[:2, clInds]
         unique_inds = self.ClusterID()[spInds]
-        plt.figure(figsize=(8, 8))
-        ax = plt.gca()
+        if figsize is not None and ax is None:
+            plt.figure(figsize=figsize)
+        if ax is None:
+            ax = plt.gca()
         ax.set_axis_bgcolor('black')
         if show_max is None:
             show_max = len(spInds)
         ax.scatter(self.__data[0, spInds[:show_max]],
                    self.__data[1, spInds[:show_max]],
                    c=self.Colours()[unique_inds[:show_max]], marker='o',
-                   s=4, edgecolors='none', alpha=0.8)
+                   s=5, edgecolors='none', alpha=0.8)
         ax.set_aspect('equal')
         if len(clInds) < 100:
             clsizes = [np.sum(self.__ClusterID == c) for c in clInds]
             for i, c in enumerate(clInds):
                 plt.annotate(s=str(i), xy=(clocs[0, i],
-                             clocs[1, i]), color='w')
+                                           clocs[1, i]), color='w')
             plt.scatter(clocs[0], clocs[1], s=clsizes, alpha=0.5, c='grey')
             plt.grid('off')
+        plt.xlim((dataWindow[0], dataWindow[1]))
+        plt.ylim((dataWindow[2], dataWindow[3]))
 
     def SpikesInCluster(self, c):
         return self.__ClusterID == c
@@ -245,15 +248,15 @@ class spikeclass(object):
         ax.grid(which='major', axis='y', linewidth=1,
                 linestyle='-', color='0.75')
 
-        sl = 1.0*np.shape(self.__shapes)[0]
+        sl = 1.0 * np.shape(self.__shapes)[0]
 
         for ic, c in enumerate(clusters):
             myShapes = self.__shapes[:, self.SpikesInCluster(c)]
             plInds = range(np.min([30, myShapes.shape[1]]))
-            [plt.plot(ic+np.arange(sl)/sl-.5, myShapes[:, i],
-             color=self.Colours()[c], alpha=0.2) for i in plInds]
-            plt.plot(ic+np.arange(sl)/sl-.5, np.mean(myShapes, axis=1),
-                     '-', color=self.__colours[c], lw=2.5)
+            [plt.plot(ic + np.arange(sl) / sl - .5, myShapes[:, i],
+                      color=self.Colours()[c], alpha=0.2) for i in plInds]
+            plt.plot(ic + np.arange(sl) / sl - .5, np.mean(myShapes, axis=1),
+                     '-', color='k', lw=2.5)
 
         plt.xlim((-.5, 11.5))
         plt.yticks([])
@@ -384,29 +387,14 @@ class spikeclass(object):
 
 # CLUSTERING AND ANALYSIS
 
-    # def MeanShift(self, h, njobs=cpu_count()):
-    #     """Performs the scikit-learn Mean Shift clustering.
-    #     kwargs are passed to the MeanShift class."""
-    #     MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
-    #                    min_bin_freq=1, n_jobs=njobs)
-    #     print("Starting sklearn Mean Shift... ")
-    #     stdout.flush()
-    #     MS.fit_predict(self.__data.T)
-    #     self.__ClusterID = MS.labels_
-    #     self.__c = MS.cluster_centers_.T
-    #     print(self.__c)
-    #     print("done.")
-    #     stdout.flush()
-
     def AlignShapes(self):
-        # Todo: optimise!
         """Re-aligns the peaks of the spike shapes. This can reduce spurious
         clustering at low sampling rates. Note the original shapes are
         overwritten and the resulting array is zero-padded at start and end.
         """
         peaks = np.argmin(self.Shapes(), axis=0)
         ap = int(np.median(peaks))
-        peaks = -np.argmin(self.Shapes()[ap-2:ap+2], axis=0) + 1
+        peaks = -np.argmin(self.Shapes()[ap - 2:ap + 2], axis=0) + 1
         alShapes = np.insert(
             self.Shapes(),
             [0, 0, self.Shapes().shape[0], self.Shapes().shape[0]],
@@ -430,15 +418,15 @@ class spikeclass(object):
         print("Starting sklearn PCA...")
         stdout.flush()
         p = PCA(n_components=ncomp, whiten=white)
-        if self.NData() > 1000000:
+        if self.NData() > 1e6:
             print(str(self.NData()) +
                   " spikes, using 1Mio shapes randomly sampled...")
-            inds = np.random.choice(self.NData(), 1000000, replace=False)
+            inds = np.random.choice(self.NData(), 1e6, replace=False)
             p.fit(self.Shapes()[:, inds].T)
             # compute projections
             fit = p.transform(self.Shapes().T).T
         else:
-            print("using all "+str(self.NData())+" shapes...")
+            print("using all " + str(self.NData()) + " shapes...")
             fit = p.fit_transform(self.Shapes().T).T
         print("done.")
         stdout.flush()
@@ -458,16 +446,17 @@ class spikeclass(object):
         PrincComp -- used to pass already-computed principal components
         njobs -- the number of processes to be used (default: n. of CPU - 1)
         mbf -- the minimum number of items in a seed"""
+
         MS = MeanShift(bin_seeding=True, bandwidth=h, cluster_all=True,
                        min_bin_freq=mbf, n_jobs=njobs)
         if PrincComp is None:
             PrincComp = self.ShapePCA(2)
         print("Starting sklearn Mean Shift... ")
         stdout.flush()
-        fourvector = np.vstack((self.__data, alpha*PrincComp))
+        fourvector = np.vstack((self.__data, alpha * PrincComp))
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
-        self.__c = MS.cluster_centers_.T  # [0:1]
+        self.__c = MS.cluster_centers_.T
         print("done.")
         stdout.flush()
 
@@ -486,7 +475,7 @@ class spikeclass(object):
                                    size=newn, replace=False)
             self.KeepOnly(ind)
             print('RemoveData removed ' +
-                  str(initialn-self.NData()) +
+                  str(initialn - self.NData()) +
                   ' datapoints.')
         else:
             print('RemoveData: No points were discarded.')
@@ -504,16 +493,18 @@ class spikeclass(object):
         # the *1.001 is needed to include the rightmost and topmost points
         # in the bins ... bad coding indeed.
         binspanx = (np.max(self.__data[0]) -
-                    np.min(self.__data[0]))/nbins[0]*1.001
+                    np.min(self.__data[0])) / nbins[0] * 1.001
         binspany = (np.max(self.__data[1]) -
-                    np.min(self.__data[1]))/nbins[1]*1.001
-        nbx = ((self.__data[0]-np.min(self.__data[0]))//binspanx).astype(int)
-        nby = ((self.__data[1]-np.min(self.__data[1]))//binspany).astype(int)
+                    np.min(self.__data[1])) / nbins[1] * 1.001
+        nbx = ((self.__data[0] - np.min(self.__data[0])) //
+               binspanx).astype(int)
+        nby = ((self.__data[1] - np.min(self.__data[1])) //
+               binspany).astype(int)
         initialn = self.NData()
         ind = np.where(hist[nbx, nby] > threshold)[0]
         self.KeepOnly(ind)
         print('FilterLowDensity removed ' +
-              str(initialn-self.NData()) + ' datapoints.')
+              str(initialn - self.NData()) + ' datapoints.')
         return ind
 
     def FilterSmallClusters(self, threshold):
@@ -534,8 +525,8 @@ class spikeclass(object):
         self.KeepOnly(d_ind_kept)
         self.__ClusterID = self.__ClusterID[d_ind_kept]
         self.__c = self.__c[:, c_ind_kept]
-        print('FilterSmallClusters removed '+str(numclus-self.NClusters()) +
-              ' clusters and ' + str(initialdata-self.NData()) +
+        print('FilterSmallClusters removed ' + str(numclus - self.NClusters()) +
+              ' clusters and ' + str(initialdata - self.NData()) +
               ' datapoints.')
         return d_ind_kept
 
@@ -567,8 +558,8 @@ class spikeclass(object):
             self.KeepOnly(d_ind_kept)
             self.__ClusterID = self.__ClusterID[d_ind_kept]
             self.__c = self.__c[:, c_ind_kept]
-            print('CropClusters removed ' + str(numclus-self.NClusters()) +
-                  ' clusters and ' + str(initialdata-self.NData()) +
+            print('CropClusters removed ' + str(numclus - self.NClusters()) +
+                  ' clusters and ' + str(initialdata - self.NData()) +
                   ' datapoints.')
         return c_ind_kept
 
@@ -586,15 +577,16 @@ class spikeclass(object):
         initialdata = self.NData()
         if not outside:
             condition = [x & y & z & w for (x, y, z, w) in zip(dx <= xmax,
-                         dx >= xmin, dy <= ymax, dy >= ymin)]
+                                                               dx >= xmin, dy <= ymax, dy >= ymin)]
         else:
             condition = [-(x & y & z & w) for (x, y, z, w) in zip(dx <= xmax,
-                         dx >= xmin, dy <= ymax, dy >= ymin)]
+                                                                  dx >= xmin, dy <= ymax, dy >= ymin)]
         d_ind_kept = np.where(condition)[0]
-        cid_kept_all = self.__ClusterID[d_ind_kept]
-        c_ind_kept = np.unique(cid_kept_all)
+        c_ind_kept = []
         if remove:
-            if numclus:
+            if numclus > 0:
+                cid_kept_all = self.__ClusterID[d_ind_kept]
+                c_ind_kept = np.unique(cid_kept_all)
                 newID = -np.ones(numclus, dtype=np.int)
                 newID[c_ind_kept] = np.array(range(len(c_ind_kept)))
                 # update temporarily the ClusterID vector
@@ -602,10 +594,11 @@ class spikeclass(object):
                 # delete data whose cluster was deleted, and clusters
                 self.__ClusterID = self.__ClusterID[d_ind_kept]
                 self.__c = self.__c[:, c_ind_kept]
+
             self.Backup()
             self.KeepOnly(d_ind_kept)
-            print('Crop removed ' + str(numclus-self.NClusters()) +
-                  ' clusters and ' + str(initialdata-self.NData()) +
+            print('Crop removed ' + str(numclus - self.NClusters()) +
+                  ' clusters and ' + str(initialdata - self.NData()) +
                   ' datapoints.')
         return d_ind_kept, c_ind_kept
 
@@ -617,7 +610,7 @@ class spikeclass(object):
         if len(self.__expinds) > 1:
             for n, i in enumerate(self.__expinds[1:]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
-            print('New experiment indices: '+str(self.__expinds))
+            print('New experiment indices: ' + str(self.__expinds))
 
     def KeepOnly(self, ind_kept):
         """This is used to remove datapoints that were filtered out
@@ -663,8 +656,8 @@ class spikeclass(object):
         for n in range(self.NClusters()):
             centre = self.ClusterLoc()[:2, n]
             inds = self.__ClusterID == n
-            clwidth[n] = np.std(np.sqrt((self.__data[0, inds]-centre[0])**2 +
-                                        (self.__data[1, inds]-centre[1])**2))
+            clwidth[n] = np.std(np.sqrt((self.__data[0, inds] - centre[0])**2 +
+                                        (self.__data[1, inds] - centre[1])**2))
         return clwidth
 
     def QualityMeasures(self, scorePCA=None, ncomp=None):
@@ -676,6 +669,7 @@ class spikeclass(object):
 
 # A separate class to build a classifier.
 class ShapeClassifier(object):
+
     def __init__(self, spikeobj):
         self.spikeobj = spikeobj
 
@@ -684,20 +678,22 @@ class ShapeClassifier(object):
                            maxn=None,
                            min_thr=5,
                            normalise=False):
-        l = self.spikeobj.Locations() + 0.5  # remove +0.5 at some point
+        """Compute the median waveform from sample of events from regions with low spike density.
+        """
+        l = self.spikeobj.Locations()
         hg, bx, by = np.histogram2d(l[0], l[1], nbins)
         mindensity = np.min(hg[hg > 0])
         density_thr = np.max((np.percentile(hg.flatten(), percentile),
-                             mindensity + min_thr))  # +5 is also arbitrary!
-        binspanx = (np.max(l[0]) - np.min(l[0]))/nbins[0]*1.001
-        binspany = (np.max(l[1]) - np.min(l[1]))/nbins[1]*1.001
+                              mindensity + min_thr))  # +5 is also arbitrary!
+        binspanx = (np.max(l[0]) - np.min(l[0])) / nbins[0] * 1.001
+        binspany = (np.max(l[1]) - np.min(l[1])) / nbins[1] * 1.001
         nbx = ((l[0] - np.min(l[0])) // binspanx).astype(int)
         nby = ((l[1] - np.min(l[1])) // binspany).astype(int)
         indbad = np.where(hg[nbx, nby] <= density_thr)[0]
         if maxn is not None:
             indbad = np.sort(np.random.permutation(indbad)[:maxn])
         if normalise:
-            normed = lambda X: X/np.max(np.abs(X), axis=0)
+            normed = lambda X: X / np.max(np.abs(X), axis=0)
             badshape = np.median(normed(self.spikeobj.Shapes()[:, indbad]),
                                  axis=1)
         else:
@@ -707,6 +703,8 @@ class ShapeClassifier(object):
         return badshape, indbad
 
     def GoodShapesByAmplitude(self, amp_thr, maxn=None, normalise=False):
+        """Compute the median waveform from sample of events with amplitudes larger than amp_thr.
+        """
         fakeampl = -np.min(self.spikeobj.Shapes(), axis=0)
         indgood = np.where(fakeampl > amp_thr)[0]
         if maxn is not None:
@@ -714,7 +712,7 @@ class ShapeClassifier(object):
         print("Working with " + str(len(indgood)) +
               " examples of good shapes.")
         if normalise:
-            normed = lambda X: X/np.max(np.abs(X), axis=0)
+            normed = lambda X: X / np.max(np.abs(X), axis=0)
             goodshape = np.median(normed(self.spikeobj.Shapes()[:, indgood]),
                                   axis=1)
         else:
@@ -722,6 +720,12 @@ class ShapeClassifier(object):
         return goodshape, indgood
 
     def FitClassifier(self, pcascores, indgood, indbad):
+        """Train a classifier to distinguish between two classes of labelled
+        events. This can be used to remove noise from spike data by providing
+        examples of good and bad spikes. The function returns a score for each
+        event.
+        """
+
         # create a matrix of waveform PC projections
         pcs = np.hstack((pcascores[:, indbad], pcascores[:, indgood]))
         # the training labels
@@ -734,12 +738,13 @@ class ShapeClassifier(object):
         classifier.fit(pcs.T, labels)
         # get the labels for the whole data set
         score = classifier.predict(pcascores.T).astype(int)
-        print("Classified as bad: "+str(np.sum(score == 0)) +
-              ", and as good: "+str(np.sum(score == 1)))
+        print("Classified as bad: " + str(np.sum(score == 0)) +
+              ", and as good: " + str(np.sum(score == 1)))
         return score
 
 
 class QualityMeasures(object):
+
     def __init__(self, spikeobj, scorePCA=None, ncomp=None):
         if np.size(spikeobj.ClusterID()) == 0:
             raise ValueError('No clustering was performed')
@@ -758,7 +763,7 @@ class QualityMeasures(object):
 
     def GaussianOverlapGroup(self, clnumbers, mode="both"):
         fourvector = np.vstack((self.spikeobj.Locations(),
-                               self.scorePCA[:4, :]))
+                                self.scorePCA[:4, :]))
         fstd = np.std(fourvector, axis=1)
         fstd[:2] = 1
         fmean = np.mean(fourvector, axis=1)
@@ -770,25 +775,23 @@ class QualityMeasures(object):
         data = []
         if mode == "both":
             for ind in inds:
-                data.append((fourvector[:, ind].T-fmean)/fstd.T)
+                data.append((fourvector[:, ind].T - fmean) / fstd.T)
         elif mode == "XY":
             for ind in inds:
-                data.append((fourvector[:2, ind].T-fmean[:2])/fstd[:2].T)
+                data.append((fourvector[:2, ind].T - fmean[:2]) / fstd[:2].T)
         elif mode == "PCA":
             for ind in inds:
-                data.append((fourvector[2:, ind].T-fmean[2:])/fstd[2:].T)
+                data.append((fourvector[2:, ind].T - fmean[2:]) / fstd[2:].T)
         else:
             raise ValueError("Acceptable modes are 'all', 'PCA' and 'XY'")
-        return self._gaussian_overlap(data)  # confusion matrix
+        return self._data_gaussian_overlap(data)  # confusion matrix
 
-    def _data_gaussian_overlap(p):
+    def _data_gaussian_overlap(self, p):
         '''
-        Fit a len(p)-component Gaussian mixture model to a set of clusters,
-        estimate the cluster overlap and return a matrix containing estimated
-        false positives and negatives.
+        Fit a len(p)-component Gaussin mixture model to a set of clusters, estimate the cluster overlap
+        and return a confusion matrix, from which false positives and negatives can be obtained.
 
-        Data is provided as list in p, each an array containing PCA projections
-        or locations or both.
+        Data is provided as list in p, each an array conatining PCA pojections or locations or both.
 
         This method is based on:
         Hill, Daniel N., Samar B. Mehta, and David Kleinfeld.
@@ -796,32 +799,34 @@ class QualityMeasures(object):
         Journal of Neuroscience 31.24 (2011): 8699-8705.
 
         From the original description by Hill et al.:
-        The percent of false positive and false negative errors are estimated
-        for both classes and stored as a confusion matrix. Error rates are
-        calculated by integrating the posterior probability of a
-        misclassification. The integral is then normalized by the number of
-        events in the cluster of interest.
+        The percent of false positive and false negative errors are estimated for
+        both classes and stored as a confusion matrix. Error rates are calculated
+        by integrating the posterior probability of a misclassification.  The
+        integral is then normalized by the number of events in the cluster of
+        interest.
 
         Returns:
-        confusion - a confusion matrix, diagonals have fase positive, and
-        off-diagonals false negatives
+        confusion - a confusion matrix, diagonals have fase positive, and off-diagonals false negatives
         '''
 
         ncl = len(p)
+        nData = np.array([p[i].shape[0] for i in range(ncl)])
+        # heuristic to prevent bad fits when classes are very unbalanced
+        if 1. * np.min(nData) / np.max(nData) < 0.5:
+            nData[:] = np.min(nData)
         # pre-compute means and covariance matrices
-        estCent = np.array([np.median(p[i], axis=0) for i in range(len(p))])
-        estCov = np.array([np.cov(p[i].T) for i in range(len(p))])
+        estCent = np.array([np.mean(p[i], axis=0) for i in range(ncl)])
+        estCov = np.array([np.cov(p[i].T) for i in range(ncl)])
         g = mixture.GMM(n_components=ncl, covariance_type='full',
-                        params='wmc', init_params='w',
-                        min_covar=1e-2, tol=1e-3)
+                        params='wmc', init_params='w', min_covar=1e-6, tol=1e-3)
         g.means_ = np.vstack(estCent)
         g.covars_ = estCov
-        data = np.concatenate(p)
+        data = np.concatenate([p[i][:nData[i]] for i in range(ncl)])
         g.fit(data)
         if g.converged_ is False:
             print("not converged")
 
-        # get posterior probabilities
+        # get responsibilities
         pr = []
         for i in range(ncl):
             pr.append(g.predict_proba(p[i]))
@@ -832,9 +837,9 @@ class QualityMeasures(object):
         d = euclidean_distances(np.vstack(estCent)[:, :2], g.means_[:, :2])
         for i in range(ncl):
             ind = np.argmin(d)
-            pInds[np.floor(ind/ncl)] = ind % ncl
+            pInds[np.floor(ind / ncl).astype(int)] = ind % ncl
             d[:, ind % ncl] = 10
-            d[np.floor(ind/ncl)] = 10
+            d[np.floor(ind / ncl).astype(int)] = 10
 
         # compute the confusion matrix entries
         confusion = np.zeros((ncl, ncl))
@@ -844,34 +849,6 @@ class QualityMeasures(object):
                 np.mean(pr[i][:, np.setxor1d(i, range(ncl))], axis=0))
             # FNs
             for j in np.setxor1d(i, range(0, ncl)):
-                confusion[pInds[i], pInds[j]] = np.sum(pr[j][:, i])/len(p[i])
-
-        # if plotResult is True:  # plot the result
-        #     ax = plt.gca()
-        #     nShow = 500
-        #     for i in range(ncl):
-        #         plt.scatter(p[i][:nShow,pltDims[0]], p[i][:nShow,pltDims[1]],
-        #        s=2,color=colors[2*i],label=str(np.round(confusion[i,i],3)))
-        #     leg = plt.legend(loc=1, ncol=1,frameon=False,fontsize=14,
-        #                      handlelength=0,handleheight=0,columnspacing=0.2,handletextpad=0)
-        #     for i, txt in enumerate( leg.get_texts()):
-        #         txt.set_color(colors[2*i])
-        #     for item in leg.legendHandles:
-        #         item.set_visible(False)
-        #     plt.axis('equal')
-        #     for i in range(ncl):
-        #         v, w = np.linalg.eigh(g._get_covars()[pInds[i]][slice(
-        #            pltDims[0],pltDims[1]+1),slice(pltDims[0],pltDims[1]+1)])
-        #         u = w[0] / np.linalg.norm(w[0])
-        #         angle = np.arctan2(u[1], u[0])
-        #         angle = 180 * angle / np.pi  # convert to degrees
-        #         v *= 9./2
-        #         ell = mpl.patches.Ellipse(g.means_[pInds[i], pltDims], v[0],
-        #            v[1], 180 + angle, color=colors[2*i])
-        #         ell.set_clip_box(ax.bbox)
-        #         ell.set_linewidth(0.7)
-        #         ell.set_edgecolor('k')
-        #         ell.set_alpha(0.55)
-        #         ax.add_artist(ell)
+                confusion[pInds[i], pInds[j]] = np.sum(pr[j][:, i]) / len(p[i])
 
         return confusion
