@@ -3,7 +3,7 @@ Herding Spikes
 
 Software for high density electrophysiology.
 
-# Sub-projects
+## Sub-projects
 
  - [onlineDetection](onlineDetection): Online-capable spike detection, done independently on each recording channel.
  - [interpolatingDetection](interpolatingDetection): Spike detection with spatial interpolation. Returns cut-outs for detected events from multiple channels, which allows performing spike localisation.
@@ -11,16 +11,16 @@ Software for high density electrophysiology.
  - [clustering](clustering): Perform spike sorting by location and PCA on interpolated data.
  - [visualisationtool](visualisationtool): A basic GUI tool for visualising and annotating sorted spikes.
 
-# How to use this software
+## How to use this software
 
 If you are interested in using this software and have questions or problems, get in touch with [us](http://homepages.inf.ed.ac.uk/mhennig/index.html).
 
-## Fast and simple spike detection
+### Fast and simple spike detection
 
 The project *[onlineDetection](onlineDetection)* provides an efficient and reliable algorithm for detecting spikes in single channels.
 Main features are a robust noise estimate based on signal percentiles rather than moments, and fast integer based computations allowing real-time performance even when recording 1000s of channels simultaneously. The current implementation only reads 3Brain [Brainwave](http://www.3brain.com/index.php/5/Downloads) files. We are working on a cython based version supporting any file format. While originally developed for high density multielectrode arrays, we expect this to perform well on most extracellular recordings.
 
-## Spike sorting on large scale, high density multielectrode arrays
+### Spike sorting on large scale, high density multielectrode arrays
 
 This process is fully automated, as manual inspection gets very time consuming for large-scale recordings. The following steps lead all the way from raw data to sorted units:
 
