@@ -638,27 +638,6 @@ class spikeclass(object):
             self.__backup[2], self.__backup[3], self.__backup[4]
 
 # OTHER
-    def ClusterWidth(self):
-        """Compute the spread of spikes within each cluster. This can be
-        used to distinguish well centred clusters from those where spike
-        locations were poorly mapped.
-
-        Note this method uses the cluster centre locations returned by
-        the mean shift algorithm, which differ from the centre of mass
-        if PCA is used alonside position.
-
-        Returns:
-        clwidth -- The standard deviation of the spike locations relative
-        to the cluster centre.
-        """
-
-        clwidth = np.zeros(self.NClusters())
-        for n in range(self.NClusters()):
-            centre = self.ClusterLoc()[:2, n]
-            inds = self.__ClusterID == n
-            clwidth[n] = np.std(np.sqrt((self.__data[0, inds] - centre[0])**2 +
-                                        (self.__data[1, inds] - centre[1])**2))
-        return clwidth
 
     def QualityMeasures(self, scorePCA=None, ncomp=None):
         return QualityMeasures(self, scorePCA, ncomp)
