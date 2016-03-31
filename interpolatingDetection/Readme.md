@@ -1,4 +1,5 @@
-# Interpolating spike detection
+Interpolating spike detection
+=============================
 
 Developed and written by [Oliver Muthmann](ollimuh@googlemail.com).
 

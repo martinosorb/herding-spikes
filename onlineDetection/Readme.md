@@ -16,6 +16,6 @@ Note this implementation is currently only compatible with the old .brw file for
 
 The online detection will produce a single text file containing (integers arranged in three columns) channel ids, time stamps (in units of frames) and amplitudes (in units of v/64).
 
-Some parameters can be adjusted by the experimenter. The repolarization threshold ensures that the measured voltage goes back towards baseline. At least one frame during the maximum width of the spike should be larger than that value. Note, however, that this can be strongly distorted by noise and therefore one should not use a high value here.
+Some parameters can be adjusted by the experimenter. The repolarisation threshold ensures that the measured voltage goes back towards baseline. At least one frame during the maximum width of the spike should be larger than that value. Note, however, that this can be strongly distorted by noise and therefore one should not use a high value here.
 
 The output from the spike detection is then read and processed by the PYTHON tools provided in [postProcessing](../postProcessing).
