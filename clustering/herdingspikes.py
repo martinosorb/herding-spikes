@@ -73,6 +73,10 @@ def ImportInterpolatedList(filenames, shapesrange=None):
     return A
 
 
+def _normed(X):
+    return X / np.max(np.abs(X), axis=0)
+
+
 class spikeclass(object):
     """A class containing code to work on 2d data with the Mean Shift
     clustering algorithms and various filters.
@@ -680,8 +684,7 @@ class ShapeClassifier(object):
         if maxn is not None:
             indbad = np.sort(np.random.permutation(indbad)[:maxn])
         if normalise:
-            normed = lambda X: X / np.max(np.abs(X), axis=0)
-            badshape = np.median(normed(self.spikeobj.Shapes()[:, indbad]),
+            badshape = np.median(_normed(self.spikeobj.Shapes()[:, indbad]),
                                  axis=1)
         else:
             badshape = np.median(self.spikeobj.Shapes()[:, indbad], axis=1)
@@ -700,8 +703,7 @@ class ShapeClassifier(object):
         print("Working with " + str(len(indgood)) +
               " examples of good shapes.")
         if normalise:
-            normed = lambda X: X / np.max(np.abs(X), axis=0)
-            goodshape = np.median(normed(self.spikeobj.Shapes()[:, indgood]),
+            goodshape = np.median(_normed(self.spikeobj.Shapes()[:, indgood]),
                                   axis=1)
         else:
             goodshape = np.median((self.spikeobj.Shapes()[:, indgood]), axis=1)
