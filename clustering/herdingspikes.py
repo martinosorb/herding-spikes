@@ -31,7 +31,8 @@ def ImportInterpolated(filename, shapesrange=None):
     if shapesrange is None:
         A.LoadShapes(np.array(g['Shapes'].value).T)
     else:
-        A.LoadShapes(np.array(g['Shapes'].value).T[shapesrange[0]:shapesrange[1]])
+        A.LoadShapes(
+            np.array(g['Shapes'].value).T[shapesrange[0]:shapesrange[1]])
     g.close()
     A._spikeclass__expinds = np.array([0])
     return A
@@ -57,7 +58,8 @@ def ImportInterpolatedList(filenames, shapesrange=None):
         if shapesrange is None:
             sh = np.append(sh, np.array(g['Shapes'].value))
         else:
-            sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
+            sh = np.append(
+             sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
     sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
@@ -144,32 +146,34 @@ class spikeclass(object):
 
 # PLOTTING METHODS
 
-    def LogHistPlot(self, save=None, binstep=0.2, figsize=(8, 8), ax=None, inds=None):
+    def LogHistPlot(self, save=None, binstep=0.2, figsize=(8, 8),
+                    ax=None, inds=None):
         """Plots a density histogram."""
         if figsize is not None and ax is None:
             plt.figure(figsize=figsize)
         if ax is None:
             ax = plt.subplot(111)
         ax.set_axis_bgcolor('black')
-        dr = np.array([self.__data[0].min(), self.__data[1].min(), self.__data[0].max(), self.__data[1].max()])
+        dr = np.array([self.__data[0].min(), self.__data[1].min(),
+                       self.__data[0].max(), self.__data[1].max()])
         dr = np.hstack((np.floor(dr[:2]), np.ceil(dr[2:])))
         if inds is None:
             n, xb, yb = np.histogram2d(
-                self.__data[1], self.__data[0],
-                bins=(np.arange(dr[0], dr[2], binstep), np.arange(dr[1], dr[3], binstep)))
+                self.__data[0], self.__data[1],
+                bins=(np.arange(dr[0], dr[2], binstep),
+                      np.arange(dr[1], dr[3], binstep)))
         else:
             n, xb, yb = np.histogram2d(
-                self.__data[1][inds], self.__data[0][inds],
-                bins=(np.arange(dr[0], dr[2], binstep), np.arange(dr[1], dr[3], binstep)))
-
-        rateMasked = np.ma.array(n, mask=(n == 0))
+                self.__data[0][inds], self.__data[1][inds],
+                bins=(np.arange(dr[0], dr[2], binstep),
+                      np.arange(dr[1], dr[3], binstep)))
+        rateMasked = np.ma.array(n, mask=(n <= 0))
         cmap = plt.cm.RdBu_r
         cmap.set_bad('k')
-        # plt.imshow(yb, xb, np.log10(rateMasked), cmap=cmap)
-        plt.imshow(np.log10(rateMasked), cmap=cmap, extent=[xb.min(), xb.max(), yb.min(), yb.max()], interpolation='none', origin='lower')
+        plt.imshow(np.ma.log10(rateMasked).T, cmap=cmap,
+                   extent=[xb.min(), xb.max(), yb.min(), yb.max()],
+                   interpolation='none', origin='lower')
         plt.axis('equal')
-        # plt.xlim((0, 65))
-        # plt.ylim((0, 65))
         plt.xlim((xb.min(), xb.max()))
         plt.ylim((yb.min(), yb.max()))
         if save is not None:
@@ -186,17 +190,18 @@ class spikeclass(object):
         if ax is None:
             ax = plt.subplot(111)
         ax.set_axis_bgcolor('black')
-        dr = np.array([self.__data[0].min(), self.__data[1].min(), self.__data[0].max(), self.__data[1].max()])
+        dr = np.array([self.__data[0].min(), self.__data[1].min(),
+                       self.__data[0].max(), self.__data[1].max()])
         dr = np.hstack((np.floor(dr[:2]), np.ceil(dr[2:])))
         if show_max is None:
             show_max = self.NData()
         if np.size(self.__ClusterID):
             ax.scatter(self.__data[0][:show_max], self.__data[1][:show_max],
-                       c=self.Colours()[self.__ClusterID[:show_max]], marker='o',
-                       s=2, edgecolors='none', alpha=0.8)
+                       c=self.Colours()[self.__ClusterID[:show_max]],
+                       marker='o', s=2, edgecolors='none', alpha=0.8)
         else:
-            ax.scatter(self.__data[0][:show_max], self.__data[1][:show_max], marker=',',
-                       c='w', s=2, edgecolors='none', alpha=0.8)
+            ax.scatter(self.__data[0][:show_max], self.__data[1][:show_max],
+                       marker=',', c='w', s=2, edgecolors='none', alpha=0.8)
         ax.set_aspect('equal')
         ax.set_xlim([dr[0], dr[2]])
         ax.set_ylim([dr[1], dr[3]])
@@ -204,7 +209,8 @@ class spikeclass(object):
             plt.savefig(save)
         return ax
 
-    def PlotRegion(self, dataWindow, save=None, show_max=None, figsize=(8, 8), ax=None):
+    def PlotRegion(self, dataWindow, save=None, show_max=None,
+                   figsize=(8, 8), ax=None):
         clInds = self.CropClusters(dataWindow, remove=False)
         spInds, unique_spLabels = self.Crop(dataWindow, remove=False)
         clocs = self.ClusterLoc()[:2, clInds]
@@ -525,7 +531,8 @@ class spikeclass(object):
         self.KeepOnly(d_ind_kept)
         self.__ClusterID = self.__ClusterID[d_ind_kept]
         self.__c = self.__c[:, c_ind_kept]
-        print('FilterSmallClusters removed ' + str(numclus - self.NClusters()) +
+        print('FilterSmallClusters removed ' +
+              str(numclus - self.NClusters()) +
               ' clusters and ' + str(initialdata - self.NData()) +
               ' datapoints.')
         return d_ind_kept
@@ -576,11 +583,11 @@ class spikeclass(object):
         numclus = self.NClusters()
         initialdata = self.NData()
         if not outside:
-            condition = [x & y & z & w for (x, y, z, w) in zip(dx <= xmax,
-                                                               dx >= xmin, dy <= ymax, dy >= ymin)]
+            condition = [x & y & z & w for (x, y, z, w) in
+                         zip(dx <= xmax, dx >= xmin, dy <= ymax, dy >= ymin)]
         else:
-            condition = [-(x & y & z & w) for (x, y, z, w) in zip(dx <= xmax,
-                                                                  dx >= xmin, dy <= ymax, dy >= ymin)]
+            condition = [-(x & y & z & w) for (x, y, z, w) in
+                         zip(dx <= xmax, dx >= xmin, dy <= ymax, dy >= ymin)]
         d_ind_kept = np.where(condition)[0]
         c_ind_kept = []
         if remove:
@@ -657,7 +664,8 @@ class ShapeClassifier(object):
                            maxn=None,
                            min_thr=5,
                            normalise=False):
-        """Compute the median waveform from sample of events from regions with low spike density.
+        """Compute the median waveform from sample of events from regions with
+        low spike density.
         """
         l = self.spikeobj.Locations()
         hg, bx, by = np.histogram2d(l[0], l[1], nbins)
@@ -682,7 +690,8 @@ class ShapeClassifier(object):
         return badshape, indbad
 
     def GoodShapesByAmplitude(self, amp_thr, maxn=None, normalise=False):
-        """Compute the median waveform from sample of events with amplitudes larger than amp_thr.
+        """Compute the median waveform from sample of events with amplitudes
+        larger than amp_thr.
         """
         fakeampl = -np.min(self.spikeobj.Shapes(), axis=0)
         indgood = np.where(fakeampl > amp_thr)[0]
@@ -767,10 +776,12 @@ class QualityMeasures(object):
 
     def _data_gaussian_overlap(self, p):
         '''
-        Fit a len(p)-component Gaussin mixture model to a set of clusters, estimate the cluster overlap
-        and return a confusion matrix, from which false positives and negatives can be obtained.
+        Fit a len(p)-component Gaussin mixture model to a set of clusters,
+        estimate the cluster overlap and return a confusion matrix, from which
+        false positives and negatives can be obtained.
 
-        Data is provided as list in p, each an array conatining PCA pojections or locations or both.
+        Data is provided as list in p, each an array conatining PCA pojections
+        or locations or both.
 
         This method is based on:
         Hill, Daniel N., Samar B. Mehta, and David Kleinfeld.
@@ -778,14 +789,15 @@ class QualityMeasures(object):
         Journal of Neuroscience 31.24 (2011): 8699-8705.
 
         From the original description by Hill et al.:
-        The percent of false positive and false negative errors are estimated for
-        both classes and stored as a confusion matrix. Error rates are calculated
-        by integrating the posterior probability of a misclassification.  The
-        integral is then normalized by the number of events in the cluster of
-        interest.
+        The percent of false positive and false negative errors are estimated
+        for both classes and stored as a confusion matrix. Error rates are
+        calculated by integrating the posterior probability of a
+        misclassification.  The integral is then normalized by the number of
+        events in the cluster of interest.
 
         Returns:
-        confusion - a confusion matrix, diagonals have fase positive, and off-diagonals false negatives
+        confusion - a confusion matrix, diagonals have fase positive, and
+        off-diagonals false negatives
         '''
 
         ncl = len(p)
@@ -796,8 +808,8 @@ class QualityMeasures(object):
         # pre-compute means and covariance matrices
         estCent = np.array([np.mean(p[i], axis=0) for i in range(ncl)])
         estCov = np.array([np.cov(p[i].T) for i in range(ncl)])
-        g = mixture.GMM(n_components=ncl, covariance_type='full',
-                        params='wmc', init_params='w', min_covar=1e-6, tol=1e-3)
+        g = mixture.GMM(n_components=ncl, covariance_type='full', params='wmc',
+                        init_params='w', min_covar=1e-6, tol=1e-3)
         g.means_ = np.vstack(estCent)
         g.covars_ = estCov
         data = np.concatenate([p[i][:nData[i]] for i in range(ncl)])
