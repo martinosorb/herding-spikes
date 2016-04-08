@@ -751,7 +751,7 @@ class QualityMeasures(object):
         return np.where((dists > 0) & (dists < d**2) &
                         (clsizes >= min_neigh_size))[0]
 
-    def GaussianOverlapGroup(self, clnumbers, mode="both"):
+    def GaussianOverlapGroup(self, clnumbers, mode="both", fit_mode="mixture"):
         fourvector = np.vstack((self.spikeobj.Locations(),
                                 self.scorePCA[:4, :]))
         fstd = np.std(fourvector, axis=1)
@@ -776,32 +776,34 @@ class QualityMeasures(object):
             raise ValueError("Acceptable modes are 'all', 'PCA' and 'XY'")
         return self._data_gaussian_overlap(data)  # confusion matrix
 
-    def _data_gaussian_overlap(self, p):
-        '''
-        Fit a len(p)-component Gaussin mixture model to a set of clusters,
-        estimate the cluster overlap and return a confusion matrix, from which
-        false positives and negatives can be obtained.
+    def _fit_gaussian_individuals(self, p):
+        """
+        Works like _data_gaussian_overlap, but fits gaussians individually to
+        clusters, instead of directly fitting a gaussian mixture model.
+        """
+        ncl = len(p)
+        nData = np.array([p[i].shape[0] for i in range(ncl)])
+        g = mixture.GMM(n_components=ncl, covariance_type='full',
+                        params='wmc', init_params='w', min_covar=1e-6,
+                        tol=1e-3)
+        means = np.empty((ncl, 2))
+        covars = np.empty((ncl, 2, 2))
+        for ic, cluster in enumerate(p):
+            g_single = mixture.GMM(n_components=1, covariance_type='full',
+                                   params='wmc', init_params='w',
+                                   min_covar=1e-6, tol=1e-3)
+            g_single.fit(cluster)
+            if not g_single.converged_:
+                raise RuntimeError("One of the fits didn't converge. Sorry.")
+            means[ic] = g_single.means_[0]
+            covars[ic] = g_single.covars_[0]
+        g.converged_ = True
+        g.means_ = means
+        g.covars_ = covars
+        g.weights_ = nData/np.sum(nData)
+        return g
 
-        Data is provided as list in p, each an array conatining PCA pojections
-        or locations or both.
-
-        This method is based on:
-        Hill, Daniel N., Samar B. Mehta, and David Kleinfeld.
-        Quality metrics to accompany spike sorting of extracellular signals.
-        Journal of Neuroscience 31.24 (2011): 8699-8705.
-
-        From the original description by Hill et al.:
-        The percent of false positive and false negative errors are estimated
-        for both classes and stored as a confusion matrix. Error rates are
-        calculated by integrating the posterior probability of a
-        misclassification.  The integral is then normalized by the number of
-        events in the cluster of interest.
-
-        Returns:
-        confusion - a confusion matrix, diagonals have fase positive, and
-        off-diagonals false negatives
-        '''
-
+    def _fit_gaussian_mixture(self, p):
         ncl = len(p)
         nData = np.array([p[i].shape[0] for i in range(ncl)])
         # heuristic to prevent bad fits when classes are very unbalanced
@@ -818,6 +820,42 @@ class QualityMeasures(object):
         g.fit(data)
         if g.converged_ is False:
             print("not converged")
+        return g
+
+    def _data_gaussian_overlap(self, p, fit_mode):
+        '''
+        Fit a len(p)-component Gaussian mixture model to a set of clusters,
+        estimate the cluster overlap and return a confusion matrix, from which
+        false positives and negatives can be obtained.
+
+        Data is provided as list in p, each an array containing PCA projections
+        or locations or both.
+
+        This method is based on:
+        Hill, Daniel N., Samar B. Mehta, and David Kleinfeld.
+        Quality metrics to accompany spike sorting of extracellular signals.
+        Journal of Neuroscience 31.24 (2011): 8699-8705.
+
+        From the original description by Hill et al.:
+        The percent of false positive and false negative errors are estimated
+        for both classes and stored as a confusion matrix. Error rates are
+        calculated by integrating the posterior probability of a
+        misclassification.  The integral is then normalized by the number of
+        events in the cluster of interest.
+
+        Returns:
+        confusion - a confusion matrix, diagonals have false positive, and
+        off-diagonals false negatives
+        '''
+        ncl = len(p)
+        if fit_mode == "mixture":
+            g = self._fit_gaussian_mixture(p)
+        elif fit_mode == "individuals":
+            g = self._fit_gaussian_individuals(p)
+        else:
+            raise ValueError("Acceptable modes are 'mixture' or 'individuals'")
+
+        estCent = np.array([np.mean(p[i], axis=0) for i in range(ncl)])
 
         # get responsibilities
         pr = []
