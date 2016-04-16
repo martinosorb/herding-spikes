@@ -42,3 +42,5 @@ These methods have for far only been tested with data recorded with the [3Brain 
 # References
 
 J.-O. Muthmann, H. Amin, E. Sernagor, A. Maccione, D. Panas, L. Berdondini, U.S. Bhalla, M.H. Hennig MH (2015). [Spike detection for large neural populations using high density multielectrode arrays](http://journal.frontiersin.org/article/10.3389/fninf.2015.00028/abstract). Front. Neuroinform. 9:28. doi: 10.3389/fninf.2015.00028.
+
+G. Hilgen, M. Sorbaro, S. Pirmoradian, J.-O. Muthmann, I. Kepiro, S. Ullo, C. Juarez Ramirez, A. Maccione, L. Berdondini, V. Murino, D. Sona, F. Cella Zanacchi, U. Bhalla, E. Sernagor, M.H. Hennig (2016). [Unsupervised spike sorting for large scale, high density multielectrode arrays.](http://dx.doi.org/10.1101/048645) bioRxiv doi: http://dx.doi.org/10.1101/048645.
