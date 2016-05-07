@@ -17,8 +17,9 @@ from scipy.stats import itemfreq
 import h5py
 import warnings
 from sys import stdout
+from distutils.version import StrictVersion
 
-if float(skvers) < 0.17:
+if StrictVersion(skvers) < StrictVersion('0.17'):
     raise Warning('Sklearn version >= 0.17 may be needed')
 
 
@@ -404,16 +405,20 @@ class spikeclass(object):
             alShapes[:, idxd] = np.roll(alShapes[:, idxd], d, axis=0)
         self.LoadShapes(alShapes)
 
-    def ShapePCA(self, ncomp=None, white=False):
+    def ShapePCA(self, ncomp=None, white=False, return_exp_var=False):
         """Compute PCA projections of spike shapes.
-        If there are more than 1Mio data points, randomly sample 1Mio
-        shapes and compute PCA from this subset only. Projections are
-        then returned for all shapes.
+        If there are more than 1Mio data points, randomly sample 1Mio shapes and compute PCA from this subset only. Projections are then returned for all shapes.
 
         Arguments:
+        ncomp : the number of components to return
+        white : Perform whitening of data if set to True
+        return_exp_var : also return ratios of variance explained
 
-        ncomp -- the number of components to return
-        white -- Perform whitening of data if set to True"""
+        Returns:
+        fit : Projections for all shapes and the number of chosen dimensions.
+        p.explained_variance_ratio_ : ratios of variance explained if return_exp_var==True
+
+        """
 
         print("Starting sklearn PCA...")
         stdout.flush()
@@ -430,7 +435,11 @@ class spikeclass(object):
             fit = p.fit_transform(self.Shapes().T).T
         print("done.")
         stdout.flush()
-        return fit
+        if return_exp_var:
+            retval = (fit, p.explained_variance_ratio_)
+        else:
+            retval = fit
+        return retval
 
     def CombinedMeanShift(self, h, alpha,
                           PrincComp=None,
