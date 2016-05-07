@@ -741,13 +741,17 @@ class QualityMeasures(object):
             scorePCA = self.spikeobj.ShapePCA(ncomp=ncomp, white=True)
         self.scorePCA = scorePCA
 
-    def Neighbours(self, cl_idx, d, min_neigh_size=0):
+    def Neighbours(self, cl_idx, d, min_neigh_size=0, at_least_one=True):
         clocs = self.spikeobj.ClusterLoc()
         clsizes = self.spikeobj.ClusterSizes()
         dists = (clocs[0] - clocs[0, cl_idx])**2 + \
                 (clocs[1] - clocs[1, cl_idx])**2
-        return np.where((dists > 0) & (dists < d**2) &
-                        (clsizes >= min_neigh_size))[0]
+        nn = np.where((dists > 0) & (dists < d**2) &
+                      (clsizes >= min_neigh_size))[0]
+        if (len(nn) == 0) & (at_least_one is True):
+            nn = np.argsort(dists)[1:]
+            nn = [nn[np.where(clsizes[nn] > min_neigh_size)[0]][0]]
+        return nn
 
     def GaussianOverlapGroup(self, clnumbers, mode="both"):
         fourvector = np.vstack((self.spikeobj.Locations(),
