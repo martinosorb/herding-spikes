@@ -787,7 +787,7 @@ class QualityMeasures(object):
                 data.append((fourvector[2:, ind].T - fmean[2:]) / fstd[2:].T)
         else:
             raise ValueError("Acceptable modes are 'all', 'PCA' and 'XY'")
-        return self._data_gaussian_overlap(data)  # confusion matrix
+        return self._data_gaussian_overlap(data, fit_mode)  # confusion matrix
 
     def _fit_gaussian_individuals(self, p):
         """
@@ -799,8 +799,8 @@ class QualityMeasures(object):
         g = mixture.GMM(n_components=ncl, covariance_type='full',
                         params='wmc', init_params='w', min_covar=1e-6,
                         tol=1e-3)
-        means = np.empty((ncl, 2))
-        covars = np.empty((ncl, 2, 2))
+        means = np.empty((ncl, p[0].shape[1]))
+        covars = np.empty((ncl, p[0].shape[1], p[0].shape[1]))
         for ic, cluster in enumerate(p):
             g_single = mixture.GMM(n_components=1, covariance_type='full',
                                    params='wmc', init_params='w',
@@ -813,7 +813,7 @@ class QualityMeasures(object):
         g.converged_ = True
         g.means_ = means
         g.covars_ = covars
-        g.weights_ = nData/np.sum(nData)
+        g.weights_ = nData / np.sum(nData)
         return g
 
     def _fit_gaussian_mixture(self, p):
