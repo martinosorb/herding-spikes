@@ -415,7 +415,7 @@ class spikeclass(object):
             alShapes[:, idxd] = np.roll(alShapes[:, idxd], d, axis=0)
         self.LoadShapes(alShapes)
 
-    def ShapePCA(self, ncomp=None, white=False, return_exp_var=False, offset=0):
+    def ShapePCA(self, ncomp=None, white=False, return_exp_var=False, offset=0, upto=0):
         """Compute PCA projections of spike shapes.
         If there are more than 1Mio data points, randomly sample 1Mio shapes and compute PCA from this subset only. Projections are then returned for all shapes.
 
@@ -424,12 +424,15 @@ class spikeclass(object):
         white : Perform whitening of data if set to True
         return_exp_var : also return ratios of variance explained
         offset : number of frames to ignore at the beginning of spike shapes (at high sampling rates shapes may start quite early)
+        upto : ignore frames beyond this value (default 0, use the whole shape)
+        
         Returns:
         fit : Projections for all shapes and the number of chosen dimensions.
         p.explained_variance_ratio_ : ratios of variance explained if return_exp_var==True
 
         """
-
+        if ~upto:
+            upto = self.Shapes().shape[0]
         print("Starting sklearn PCA...")
         stdout.flush()
         p = PCA(n_components=ncomp, whiten=white)
@@ -437,12 +440,12 @@ class spikeclass(object):
             print(str(self.NData()) +
                   " spikes, using 1Mio shapes randomly sampled...")
             inds = np.random.choice(self.NData(), 1e6, replace=False)
-            p.fit(self.Shapes()[offset:, inds].T)
+            p.fit(self.Shapes()[offset:upto, inds].T)
             # compute projections
-            fit = p.transform(self.Shapes()[offset:,:].T).T
+            fit = p.transform(self.Shapes()[offset:upto,:].T).T
         else:
             print("using all " + str(self.NData()) + " shapes...")
-            fit = p.fit_transform(self.Shapes()[offset:,:].T).T
+            fit = p.fit_transform(self.Shapes()[offset:upto,:].T).T
         print("done.")
         stdout.flush()
         if return_exp_var:
