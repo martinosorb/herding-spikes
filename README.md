@@ -18,7 +18,7 @@ If you are interested in using this software and have questions or problems, get
 ### Fast and simple spike detection
 
 The project *[onlineDetection](onlineDetection)* provides an efficient and reliable algorithm for detecting spikes in single channels.
-Main features are a robust noise estimate based on signal percentiles rather than moments, and fast integer based computations allowing real-time performance even when recording 1000s of channels simultaneously. The current implementation only reads 3Brain [Brainwave](http://www.3brain.com/index.php/5/Downloads) files. We are working on a cython based version supporting any file format. While originally developed for high density multielectrode arrays, we expect this to perform well on most extracellular recordings.
+Main features are a robust noise estimate based on signal percentiles rather than moments, and fast integer based computations allowing real-time performance even when recording 1000s of channels simultaneously. While originally developed for high density multielectrode arrays, we expect this to perform well on most extracellular recordings.
 
 ### Spike sorting on large scale, high density multielectrode arrays
 
