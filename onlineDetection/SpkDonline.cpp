@@ -68,8 +68,6 @@ void Detection::MedianVoltage(unsigned short *vm) // easier to interpret, though
     }
     std::sort(Slice, Slice + sizeof Slice / sizeof Slice[0]);
     Aglobal[t] = Slice[NChannels / 2];
-    std::cout << Aglobal[t] << " ";
-    std::cout.flush();
   }
 }
 
