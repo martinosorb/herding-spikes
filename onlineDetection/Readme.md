@@ -14,6 +14,8 @@ Under development. Start by adapting `detect.pyx` to your needs, then compile th
 
 ### Original Brainwave support
 
+This code is in the folder [brw_files](brw_files).
+
 1. Download the current *BrwExtReader.dll* from [http://www.3brain.com/index.php/5/Downloads](http://www.3brain.com/index.php/5/Downloads) or use the version provided here
 2. Compile Main.cs (use any C# compiler for that, e.g. [gmcs](http://www.mono-project.com/docs/about-mono/languages/csharp/) or [Monodevelop](http://www.monodevelop.com/) on Linux), or use the executable provided here.
 3. Run (e.g. using [Mono](http://www.mono-project.com/)), a graphical user interface will appear.
