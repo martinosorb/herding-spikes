@@ -58,12 +58,16 @@ def ImportInterpolatedList(filenames, shapesrange=None):
         s[i] = g['Sampling'].value
         if shapesrange is None:
             sh = np.append(sh, np.array(g['Shapes'].value))
+            shLen = g['Shapes'].shape[1]
         else:
             sh = np.append(
              sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
-    sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
+    if shapesrange is None:
+        sh = np.reshape(sh, (len(t), shLen))
+    else:
+        sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
     if len(np.unique(s)) > 1:
         raise Warning('Data sets have different sampling rates\n' + str(s))
     A = spikeclass(loc)
@@ -342,15 +346,14 @@ class spikeclass(object):
         """Returns a pair of indices denoting the start and end
         of an experiment. Can currently only be used if data from multiple
         experiments is read with the helper function ImportInterpolatedList."""
-        raise NotImplementedError()
-        # if i+1 < len(self.__expinds):
-        #     final = self.__expinds[i+1]
-        # elif i+1 == len(self.__expinds):
-        #     final = self.NData()
-        # else:
-        #     raise ValueError('There are only ' + len(self.__expinds) +
-        #                      ' datasets.')
-        # return np.arange(self.__expinds[i], self.__expinds[i+1])
+        if i+1<len(self.__expinds):
+            final = self.__expinds[i+1]
+        elif i+1==len(self.__expinds):
+            final = self.NData()
+        else:
+            raise ValueError('There are only '+len(self.__expinds)+' datasets.')
+        return np.arange(self.__expinds[i],self.__expinds[i+1])
+
 
     def ClusterIndices(self, n, exper=None):
         raise NotImplementedError()
@@ -425,7 +428,7 @@ class spikeclass(object):
         return_exp_var : also return ratios of variance explained
         offset : number of frames to ignore at the beginning of spike shapes (at high sampling rates shapes may start quite early)
         upto : ignore frames beyond this value (default 0, use the whole shape)
-        
+
         Returns:
         fit : Projections for all shapes and the number of chosen dimensions.
         p.explained_variance_ratio_ : ratios of variance explained if return_exp_var==True
@@ -439,7 +442,7 @@ class spikeclass(object):
         if self.NData() > 1e6:
             print(str(self.NData()) +
                   " spikes, using 1Mio shapes randomly sampled...")
-            inds = np.random.choice(self.NData(), 1e6, replace=False)
+            inds = np.random.choice(self.NData(), int(1e6), replace=False)
             p.fit(self.Shapes()[offset:upto, inds].T)
             # compute projections
             fit = p.transform(self.Shapes()[offset:upto,:].T).T
@@ -631,8 +634,9 @@ class spikeclass(object):
         """This is used when applying a filter, to keep track
         of the indices at which new stimulation protocols begin"""
         if len(self.__expinds) > 1:
-            for n, i in enumerate(self.__expinds[1:]):
+            for n, i in enumerate(self.__expinds[1:-1]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
+            self.__expinds[-1] = len(myInds)-1
             print('New experiment indices: ' + str(self.__expinds))
 
     def KeepOnly(self, ind_kept):
