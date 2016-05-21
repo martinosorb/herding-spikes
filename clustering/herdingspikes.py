@@ -59,8 +59,7 @@ def ImportInterpolatedList(filenames, shapesrange=None):
         if shapesrange is None:
             sh = np.append(sh, np.array(g['Shapes'].value))
         else:
-            sh = np.append(
-             sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
+            sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
     sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
@@ -109,6 +108,7 @@ class spikeclass(object):
                     if 'Sampling' in g.keys() else np.array([])
                 self.__expinds = g['expinds'].value \
                     if 'expinds' in g.keys() else np.array([0])
+                self.__clsizes = []
                 g.close()
             else:
                 givendata = args[0]
@@ -123,6 +123,7 @@ class spikeclass(object):
                 self.__colours = np.array([])
                 self.__sampling = []
                 self.__expinds = np.array([0])
+                self.__clsizes = []
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2, ndata):
@@ -135,6 +136,7 @@ class spikeclass(object):
             self.__colours = np.array([])
             self.__sampling = []
             self.__expinds = np.array([0])
+            self.__clsizes = []  # buffer those for speed
         else:
             raise ValueError(
                 'Can be initialised with 1 argument (the data' +
@@ -315,7 +317,9 @@ class spikeclass(object):
 
     def ClusterSizes(self):
         """Returns an array containing the number of points in each cluster."""
-        return itemfreq(self.__ClusterID)[:, 1]
+        if not any(self.__clsizes):
+            self.__clsizes = itemfreq(self.__ClusterID)[:, 1]
+        return self.__clsizes
 
     def Sampling(self):
         """Returns the sampling rate."""
@@ -425,7 +429,7 @@ class spikeclass(object):
         return_exp_var : also return ratios of variance explained
         offset : number of frames to ignore at the beginning of spike shapes (at high sampling rates shapes may start quite early)
         upto : ignore frames beyond this value (default 0, use the whole shape)
-        
+
         Returns:
         fit : Projections for all shapes and the number of chosen dimensions.
         p.explained_variance_ratio_ : ratios of variance explained if return_exp_var==True
@@ -439,13 +443,13 @@ class spikeclass(object):
         if self.NData() > 1e6:
             print(str(self.NData()) +
                   " spikes, using 1Mio shapes randomly sampled...")
-            inds = np.random.choice(self.NData(), 1e6, replace=False)
+            inds = np.random.choice(self.NData(), int(1e6), replace=False)
             p.fit(self.Shapes()[offset:upto, inds].T)
             # compute projections
-            fit = p.transform(self.Shapes()[offset:upto,:].T).T
+            fit = p.transform(self.Shapes()[offset:upto, :].T).T
         else:
             print("using all " + str(self.NData()) + " shapes...")
-            fit = p.fit_transform(self.Shapes()[offset:upto,:].T).T
+            fit = p.fit_transform(self.Shapes()[offset:upto, :].T).T
         print("done.")
         stdout.flush()
         if return_exp_var:
