@@ -60,8 +60,7 @@ def ImportInterpolatedList(filenames, shapesrange=None):
             sh = np.append(sh, np.array(g['Shapes'].value))
             shLen = g['Shapes'].shape[1]
         else:
-            sh = np.append(
-             sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
+            sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
     if shapesrange is None:
@@ -113,6 +112,7 @@ class spikeclass(object):
                     if 'Sampling' in g.keys() else np.array([])
                 self.__expinds = g['expinds'].value \
                     if 'expinds' in g.keys() else np.array([0])
+                self.__clsizes = []
                 g.close()
             else:
                 givendata = args[0]
@@ -127,6 +127,7 @@ class spikeclass(object):
                 self.__colours = np.array([])
                 self.__sampling = []
                 self.__expinds = np.array([0])
+                self.__clsizes = []
         elif len(args) == 2:
             ndata = args[0].shape[1]
             if np.shape(args[0]) != (2, ndata):
@@ -139,6 +140,7 @@ class spikeclass(object):
             self.__colours = np.array([])
             self.__sampling = []
             self.__expinds = np.array([0])
+            self.__clsizes = []  # buffer those for speed
         else:
             raise ValueError(
                 'Can be initialised with 1 argument (the data' +
@@ -319,7 +321,9 @@ class spikeclass(object):
 
     def ClusterSizes(self):
         """Returns an array containing the number of points in each cluster."""
-        return itemfreq(self.__ClusterID)[:, 1]
+        if not any(self.__clsizes):
+            self.__clsizes = itemfreq(self.__ClusterID)[:, 1]
+        return self.__clsizes
 
     def Sampling(self):
         """Returns the sampling rate."""
@@ -445,10 +449,10 @@ class spikeclass(object):
             inds = np.random.choice(self.NData(), int(1e6), replace=False)
             p.fit(self.Shapes()[offset:upto, inds].T)
             # compute projections
-            fit = p.transform(self.Shapes()[offset:upto,:].T).T
+            fit = p.transform(self.Shapes()[offset:upto, :].T).T
         else:
             print("using all " + str(self.NData()) + " shapes...")
-            fit = p.fit_transform(self.Shapes()[offset:upto,:].T).T
+            fit = p.fit_transform(self.Shapes()[offset:upto, :].T).T
         print("done.")
         stdout.flush()
         if return_exp_var:
