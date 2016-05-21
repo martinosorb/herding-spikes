@@ -10,9 +10,13 @@ This branch provides an alpha version which can process raw data from any source
 
 ### Generic code
 
-Under development. Start by adapting `detect.pyx` to your needs, then compile the code by running `python setup.py build_ext --inplace`, and edit `test.py` and run this to detect spikes. The output is an ASCII file containing channel number, time stamp and (scaled) amplitude for each spike.
+Underdevelopment. Start by adapting `detect.pyx` to your needs, then compile the code by running `python setup.py build_ext --inplace`, and edit `test.py` and run this to detect spikes. The output is an ASCII file containing channel number, time stamp and (scaled) amplitude for each spike.
+
+Note: As it is, the code expects spikes to be negative deflections, the sign of the parameter Ascale cen be changed for positive spikes.
 
 ### Original Brainwave support
+
+This code is in the folder [brw_files](brw_files).
 
 1. Download the current *BrwExtReader.dll* from [http://www.3brain.com/index.php/5/Downloads](http://www.3brain.com/index.php/5/Downloads) or use the version provided here
 2. Compile Main.cs (use any C# compiler for that, e.g. [gmcs](http://www.mono-project.com/docs/about-mono/languages/csharp/) or [Monodevelop](http://www.monodevelop.com/) on Linux), or use the executable provided here.
