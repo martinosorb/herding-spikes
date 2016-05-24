@@ -486,6 +486,7 @@ class spikeclass(object):
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
+        self.__clsizes = itemfreq(self.__ClusterID)[:, 1]
         print("done.")
         stdout.flush()
 
