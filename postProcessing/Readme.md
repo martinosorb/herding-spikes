@@ -45,17 +45,17 @@ Only retain events with largest amplitudes in a close spatiotemporal surrounding
 
 A couple of elementary methods for visualizing the results are provided in SpkD_plot.py. These are
 
-SpkD_plot.Rasterplot Creates colour coded rasters. A projection of the spatial locations on the x- or y-axis is plotted against time, and the colour can be used for any other property of events (location, amplitude, probability...).
+`SpkD_plot.Rasterplot` Creates colour coded rasters. A projection of the spatial locations on the x- or y-axis is plotted against time, and the colour can be used for any other property of events (location, amplitude, probability...).
 
-SpkD_plot.Scatterplot Creates a colour coded spatial scatterplot of the quantity of interest.
+`SpkD_plot.Scatterplot` Creates a colour coded spatial scatterplot of the quantity of interest.
 
-SpkD_plot.Densityplot Creates a spatial histogram.
+`SpkD_plot.Densityplot` Creates a spatial histogram.
 
-SpkD_plot.Matrixplot To visualize matrices.
+`SpkD_plot.Matrixplot` To visualize matrices.
 
-SpkD_plot.Clusterplot Visualizes clusters from the clustering method.
+`SpkD_plot.Clusterplot` Visualizes clusters from the clustering method.
 
-SpkD_plot.PeriEventActivityPlot Plots a spatial map of biases in the activity of surrounding events.
+`SpkD_plot.PeriEventActivityPlot` Plots a spatial map of biases in the activity of surrounding events.
 
 
 ## Correlation analysis
