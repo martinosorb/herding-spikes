@@ -667,7 +667,7 @@ def PrintStats(HdfFile,StatsFile, onlineVersion=False):
     else:
         HighThr=2.
     g=h5py.File(HdfFile,'r')
-    f=file(StatsFile,'w')
+    f=open(StatsFile,'w')
     f.write('Sampling rate: %i \n'%(g['Sampling'].value))
     f.write('Duration of recording: %i s \n'%(g['tMax'].value))
     f.write('Number of recorded channels: %i \n \n'%(len(g['recordedChannels'].value)))

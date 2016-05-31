@@ -4,7 +4,7 @@ import pylab
 # import matplotlib as mplt
 # import h5py
 import SpkD_online
-import SpkD_plot
+import SpkD_plot_v24 as SpkD_plot
 
 # This is the program that writes the .txt File of the online version into a
 # .hdf File, marks events detected in multiple channels,

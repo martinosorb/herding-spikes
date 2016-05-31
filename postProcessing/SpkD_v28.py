@@ -2,7 +2,9 @@ import numpy as np
 import h5py
 import scipy.stats
 import scipy.cluster
-import time
+
+# WARNING! This could give problems in Python2
+long = int
 #from IPython import get_ipython
 #ipython = get_ipython()
 
@@ -20,7 +22,7 @@ def readInfoFile(TxtFile, HdfFile):
     #k=0
     #n=0
     n1=0
-    b=file(TxtFile + '_Info.txt')
+    b=open(TxtFile + '_Info.txt')
     VarName=''
     ThrScale=2
     #Ascale=-64
@@ -156,7 +158,7 @@ def readInfoFile(TxtFile, HdfFile):
 
 ### Bias correction (median voltage)
 def readAvgFile(TxtFile, HdfFile, NCh):
-    b=file(TxtFile + '_Avg.txt')
+    b=open(TxtFile + '_Avg.txt')
     X=[]
     for i in b:
         X.append(int(i))
@@ -188,7 +190,7 @@ def readAvgFile(TxtFile, HdfFile, NCh):
 
 ### figure out dimensions of arrays, read spike files
 def readSpikesFile(TxtFile, HdfFile, NoisyChFile, NCh, removeCh, tMax):
-    b=file(TxtFile + '_Spikes.txt')
+    b=open(TxtFile + '_Spikes.txt')
     X=[]
     Amp=[]
     Y=[]
@@ -207,7 +209,7 @@ def readSpikesFile(TxtFile, HdfFile, NoisyChFile, NCh, removeCh, tMax):
         #Y2.append(9+(np.sum((z[5:8]+z[6:])/2)+(z[5]+z[8])/2)*3)
         #Y2.append(z[5])
     b.close()
-    b=file(TxtFile + '_SpikesX.txt')
+    b=open(TxtFile + '_SpikesX.txt')
     for i in b:
         z=np.array(i.split(),dtype=int)
         X.append(z[0]+NCh)
@@ -428,7 +430,7 @@ def readShapesFile(TxtFile, HdfFile, NSpk):
     ### read shapes
     fName=np.array(['_Shapes.txt','_ShapesX.txt'])
     for iiii in range(2):
-        b=file(TxtFile + fName[iiii])
+        b=open(TxtFile + fName[iiii])
         LF=LocationFinder(iiii==0,Ascale,IgnCh,PreCut,Ncut,NcutL,Qdavg,LspikeN,recCh)
         for i in b:
             z=np.array(i.split(),dtype=int)
@@ -683,7 +685,7 @@ def readShapesFileInserted(TxtFile, HdfFile, NSpk, Sampling, Lspike=4):
     SortIndInv[SortInd]=np.arange(SortInd.shape[0])
     fName=np.array(['_Shapes.txt','_ShapesX.txt'])
     for iiii in range(2):
-        b=file(TxtFile + fName[iiii])
+        b=open(TxtFile + fName[iiii])
         if iiii==0:
             LF=LocationFinderI(iiii==0,BInd,Lspike,Ascale,IgnCh,PreCut,Ncut,NcutL,Bd,Qdavg,inserted=True)
         else:
