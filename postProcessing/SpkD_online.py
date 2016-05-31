@@ -16,7 +16,7 @@ def readSpikesFile(TxtFile, HdfFile, NoisyChFile, recCh=4096,
         recCh = np.arange(recCh, dtype=int)
     else:
         NCh = len(recCh)
-    b = file(TxtFile + '_online_Spikes.txt')
+    b = open(TxtFile + '_online_Spikes.txt')
     X = []
     Amp = []
     Y = []
