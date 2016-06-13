@@ -322,7 +322,9 @@ class spikeclass(object):
     def ClusterSizes(self):
         """Returns an array containing the number of points in each cluster."""
         if not any(self.__clsizes):
-            self.__clsizes = itemfreq(self.__ClusterID)[:, 1]
+            self.__clsizes = np.zeros(self.NClusters())
+            tmp = itemfreq(self.__ClusterID)
+            self.__clsizes[tmp[:, 0]] = tmp[:, 1]
         return self.__clsizes
 
     def Sampling(self):
