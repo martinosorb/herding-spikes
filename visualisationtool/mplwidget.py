@@ -7,22 +7,25 @@ import matplotlib.pyplot as plt
 from PyQt4 import QtCore
 from customtoolbar import NavigationToolbar3
 from customtoolbarpca import NavigationToolbarPCA
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-import scipy.special._ufuncs_cxx
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+#import scipy.special._ufuncs_cxx
+from matplotlib.figure import Figure
 
-
-_fromUtf8 = QtCore.QString.fromUtf8
+#_fromUtf8 = QtCore.QString.fromUtf8
 
 
 class MplCanvas(FigureCanvas):
     def __init__(self):
-        self.fig = plt.figure(figsize=(20, 20))
-        self.ax = self.fig.add_subplot(111)
+        # self.fig = plt.figure(figsize=(20, 20))
+        # plt.ion()
+        self.fig = Figure(figsize=(20,20))#, dpi=100)
         FigureCanvas.__init__(self, self.fig)
         FigureCanvas.setSizePolicy(self,
                                     QtGui.QSizePolicy.Expanding,
                                     QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
+        self.ax = self.fig.add_subplot(111)
+        # self.ax.hold(False)
 
 
 class MplWidget(QtGui.QWidget):

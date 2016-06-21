@@ -1,9 +1,9 @@
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.backends.qt_compat import QtCore, QtWidgets
-import scipy.special._ufuncs_cxx
+#import scipy.special._ufuncs_cxx
 
 
-_fromUtf8 = QtCore.QString.fromUtf8
+#_fromUtf8 = QtCore.QString.fromUtf8
 
 
 try:
@@ -80,4 +80,3 @@ class NavigationToolbarPCA(NavigationToolbar2QT, QtWidgets.QToolBar):
         self._active = None
         self._actions['pan'].setChecked(False)
         self._actions['zoom'].setChecked(False)
-

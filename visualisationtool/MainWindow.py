@@ -10,16 +10,23 @@ from PyQt4.QtGui import QColor, QDialog, QRadioButton, QTableWidgetItem, QCheckB
     QApplication, QTableView, QBrush, QItemSelectionModel
 from PyQt4.QtCore import Qt
 from DialogConf import Dialog
-import scipy.special._ufuncs_cxx
+#import scipy.special._ufuncs_cxx
 import time
+import matplotlib as mpl
 
-_fromUtf8 = QtCore.QString.fromUtf8
+#_fromUtf8 = QtCore.QString.fromUtf8
 
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
+        # set some defaults (should be done here?)
+        #mpl.rcParams['lines.linewidth'] = 1
+        mpl.rcParams['font.size'] = 6
+        mpl.rcParams['axes.titlesize'] = 7   # fontsize of the axes title
+        mpl.rcParams['axes.labelsize'] = 7 # fontsize of the x any y labels
+
         QtGui.QWidget.__init__(self, parent)
-        _fromUtf8 = QtCore.QString.fromUtf8
+        #_fromUtf8 = QtCore.QString.fromUtf8
         self.ui = Ui_MainWindow()
         self.cw = Ui_Dialog()
         self.ui.setupUi(self)
@@ -59,9 +66,7 @@ class MainWindow(QtGui.QMainWindow):
         self.errorn = ''
         self.maxv = 0
 
-
         self.initbuttons()
-
 
         self.ct = ActionController()
         self.ui.mpl.ntb.setController(self.ct)
@@ -108,11 +113,8 @@ class MainWindow(QtGui.QMainWindow):
         #Called when the PCA computation has finished
         self.connect(self.thread, QtCore.SIGNAL("finished()"), self.updateUi)
 
-
-
         self.ui.widget_12.canvas.mpl_connect('button_press_event', self.onpick3)
         self.ui.widget_9.canvas.mpl_connect('pick_event', self.onpickwave)
-
 
         #Add listeners to the edit (start and end) lines.
         self.ui.line_start.editingFinished.connect(self.miEvent)
@@ -127,13 +129,10 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.label_2.mousePressEvent = self.fillstartline
         self.ui.label_3.mousePressEvent = self.fillendline
 
-
         self.configureAxesPCA()
         self.configureISIPlot()
         self.configureWaveformPlot()
         self.configureSpikeTrainPlot()
-
-
 
         self.ui.pushButton.setStyleSheet("QWidget { background-color : blue}")
         self.ui.pushButton_9.setToolTip("Saves the flagged clusters in the current directory")
@@ -199,9 +198,10 @@ class MainWindow(QtGui.QMainWindow):
     def alltime(self):
         #Selects all the complete hdf5 recording session
         self.printStartLine(self.ct.mint)
-        self.ui.line_start.setText(str(self.ct.mint/self.ct.sampling))
+        # make sure data is in range (hack, not nice)
+        self.ui.line_start.setText(str(self.ct.mint/self.ct.sampling+0.0001))
         self.printEndLine(self.ct.maxt)
-        self.ui.line_end.setText(str(self.ct.maxt/self.ct.sampling))
+        self.ui.line_end.setText(str(self.ct.maxt/self.ct.sampling-0.0001))
         self.ui.pushButton_2.setFocus()
 
 
@@ -416,7 +416,7 @@ class MainWindow(QtGui.QMainWindow):
         #Enables/Disables the complete/filtered view radio buttons in the PCA window
         self.ui.radioButton_5.setEnabled(mode)
         self.ui.radioButton_6.setEnabled(mode)
-            
+
 
 
     def configureAxesPCA(self):
@@ -1170,6 +1170,3 @@ class MyThread(QThread):
 
     def run(self):
         self.ct.computePCA()
-
-
-
