@@ -1,6 +1,6 @@
 import string
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, QAbstractTableModel, QAbstractItemModel #QVariant, 
+from PyQt4.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QVariant
 from PyQt4.QtGui import QColor, QPalette, QLabel, QPixmap
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
@@ -375,7 +375,7 @@ class MyTableModel(QAbstractTableModel):
 
     def data(self, index, role):
         if not index.isValid():
-            return () #QVariant()
+            return QVariant()
 
         #if (index.row() >= len(self.arraydata))
         elif (role == Qt.DisplayRole) | (role == Qt.EditRole):
@@ -407,7 +407,7 @@ class MyTableModel(QAbstractTableModel):
 
 
 
-        return () #QVariant()
+        return QVariant()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
@@ -437,5 +437,5 @@ class MyTableModel(QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headerdata[col] #QVariant(self.headerdata[col])
-        return () # QVariant()
+            return QVariant(self.headerdata[col])
+        return QVariant()
