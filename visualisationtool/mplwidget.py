@@ -1,6 +1,6 @@
 import string
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QVariant
+from PyQt4.QtCore import Qt, QAbstractTableModel, QAbstractItemModel #, QVariant
 from PyQt4.QtGui import QColor, QPalette, QLabel, QPixmap
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
@@ -355,14 +355,10 @@ class MyTableModel(QAbstractTableModel):
         flags = QAbstractItemModel.flags(self, index) ^ QtCore.Qt.ItemIsSelectable
         return flags
 
-
-
     def setColors(self, colors):
         self.color = colors
         self.flagcolors = [self.unFlagColor]*len(colors)
         self.holdcolors = [self.holdOffColor]*len(colors)
-
-
 
     def rowCount(self, parent):
         return len(self.arraydata)
@@ -375,7 +371,7 @@ class MyTableModel(QAbstractTableModel):
 
     def data(self, index, role):
         if not index.isValid():
-            return QVariant()
+            return None #QVariant()
 
         #if (index.row() >= len(self.arraydata))
         elif (role == Qt.DisplayRole) | (role == Qt.EditRole):
@@ -403,11 +399,7 @@ class MyTableModel(QAbstractTableModel):
             elif index.column() in self.sortnumber:
                     return float(self.arraydata[index.row()][index.column()])
 
-
-
-
-
-        return QVariant()
+        return None #QVariant()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
@@ -437,5 +429,5 @@ class MyTableModel(QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return QVariant(self.headerdata[col])
-        return QVariant()
+            return self.headerdata[col] #QVariant(self.headerdata[col])
+        return None #QVariant()
