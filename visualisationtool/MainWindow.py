@@ -13,6 +13,8 @@ from DialogConf import Dialog
 #import scipy.special._ufuncs_cxx
 import time
 import matplotlib as mpl
+import sip
+sip.setapi('QVariant',1)
 
 #_fromUtf8 = QtCore.QString.fromUtf8
 
