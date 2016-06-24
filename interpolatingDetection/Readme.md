@@ -5,7 +5,9 @@ Developed and written by [Oliver Muthmann](ollimuh@googlemail.com).
 
 Reference: J.-O. Muthmann, H. Amin, E. Sernagor, A. Maccione, D. Panas, L. Berdondini, U.S. Bhalla, M.H. Hennig MH (2015). [Spike detection for large neural populations using high density multielectrode arrays](http://journal.frontiersin.org/article/10.3389/fninf.2015.00028/abstract). Front. Neuroinform. 9:28. doi: 10.3389/fninf.2015.00028.
 
-Note this implementation is currently only compatible with the old .brw file format used by 3Brain to store Biocam4096 recordings with Brainwave 2.0. A generic version with a python interface will be ready shortly.
+Note this implementation is currently only compatible with the old .brw file format used by 3Brain to store Biocam4096 recordings with Brainwave 2.0.
+
+A generic version with a python interface is under development, preliminary code can be found in [Albert Puente's repository](https://github.com/albertpuente/herding-spikes/tree/detection-cpp/interpolatingDetection).
 
 ## Installation and use
 

@@ -6,6 +6,13 @@ This code performs fully automated spike sorting on events detected and localise
 
 The full workflow is illustrated in a jupyter notebook: [Sorting_workflow_demonstration.ipynb](Sorting_workflow_demonstration.ipynb)
 
+Sorting is very fast, these are run times measured on 10 cores Intel Xeon E5-2630, 2.60GHz:
+
+Number of spikes | Run time (h:mm:ss)
+------------------|---------
+10000000 | 0:06:27
+6000000 | 0:03:34
+2000000 | 0:01:58
 
 A description of the methods is availbe in this preprint:
 
