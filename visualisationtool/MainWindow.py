@@ -620,16 +620,16 @@ class MainWindow(QtGui.QMainWindow):
             model = self.ui.tableView.model()
             index = model.index(i,1)
             index2 = model.index(i,0)
-            cl = int(model.data(index).toPyObject())
+            cl = int(model.data(index))
             ind = self.ct.getMapClusters()[cl]
 
-            if (model.data(index2).toPyObject() == "U") & (self.ct.getLastClusterSel() != ind):
+            if (model.data(index2) == "U") & (self.ct.getLastClusterSel() != ind):
                 model.setData(index2, 1)
-            elif (model.data(index2).toPyObject() == "H") & (self.ct.getLastClusterSel() != ind):
+            elif (model.data(index2) == "H") & (self.ct.getLastClusterSel() != ind):
                 model.setData(index2, 0)
-            elif (model.data(index2).toPyObject() == "U") & (self.ct.getLastClusterSel() == ind):
+            elif (model.data(index2) == "U") & (self.ct.getLastClusterSel() == ind):
                 model.setData(index2, 3)
-            elif (model.data(index2).toPyObject() == "H") & (self.ct.getLastClusterSel() == ind):
+            elif (model.data(index2) == "H") & (self.ct.getLastClusterSel() == ind):
                 model.setData(index2, 2)
 
 
@@ -643,7 +643,7 @@ class MainWindow(QtGui.QMainWindow):
         if c in [1,2,3]:
             model = self.ui.tableView.model()
             index = model.index(i,1)
-            cl = int(model.data(index).toPyObject()) #int(model.data(index).toPyObject())
+            cl = int(model.data(index)) #int(model.data(index))
             currentitem = self.ct.getMapClusters()[cl]
             self.ct.handleSelection(currentitem)
 
@@ -657,10 +657,10 @@ class MainWindow(QtGui.QMainWindow):
             index = model.index(i,1)
             index2 = model.index(i,4)
 
-            ind = int(model.data(index).toPyObject())
+            ind = int(model.data(index))
             ind = self.ct.getMapClusters()[ind]
 
-            if model.data(index2).toPyObject() == "U":
+            if model.data(index2) == "U":
                 self.ct.flagClusters([ind])
                 model.setData(index2, 1)
             else:
@@ -673,16 +673,16 @@ class MainWindow(QtGui.QMainWindow):
         model = self.ui.tableView.model()
         index = model.index(row,1)
         index2 = model.index(row,0)
-        cl = int(model.data(index).toPyObject())
+        cl = int(model.data(index))
         ind = self.ct.getMapClusters()[cl]
 
-        if (model.data(index2).toPyObject() == "U") & (not select):
+        if (model.data(index2) == "U") & (not select):
             model.setData(index2, 0)
-        elif (model.data(index2).toPyObject() == "H") & (not select):
+        elif (model.data(index2) == "H") & (not select):
             model.setData(index2, 1)
-        elif (model.data(index2).toPyObject() == "U") & (select):
+        elif (model.data(index2) == "U") & (select):
             model.setData(index2, 2)
-        elif (model.data(index2).toPyObject() == "H") & (select):
+        elif (model.data(index2) == "H") & (select):
             model.setData(index2, 3)
 
 
@@ -710,7 +710,7 @@ class MainWindow(QtGui.QMainWindow):
         #Gets the hold on status of a row
         model = self.ui.tableView.model()
         index = model.index(row,0)
-        data = model.data(index).toPyObject()
+        data = model.data(index)
         if data == 'U':
             return Qt.Unchecked
         else:
@@ -722,23 +722,23 @@ class MainWindow(QtGui.QMainWindow):
         model = self.ui.tableView.model()
         index = model.index(row,1)
         index2 = model.index(row,0)
-        cl = int(model.data(index).toPyObject())
+        cl = int(model.data(index))
         ind = self.ct.getMapClusters()[cl]
 
-        if (model.data(index2).toPyObject() == "U") & (self.ct.getLastClusterSel() != ind):
+        if (model.data(index2) == "U") & (self.ct.getLastClusterSel() != ind):
             model.setData(index2, 1)
-        elif (model.data(index2).toPyObject() == "H") & (self.ct.getLastClusterSel() != ind):
+        elif (model.data(index2) == "H") & (self.ct.getLastClusterSel() != ind):
             model.setData(index2, 0)
-        elif (model.data(index2).toPyObject() == "U") & (self.ct.getLastClusterSel() == ind):
+        elif (model.data(index2) == "U") & (self.ct.getLastClusterSel() == ind):
             model.setData(index2, 3)
-        elif (model.data(index2).toPyObject() == "H") & (self.ct.getLastClusterSel() == ind):
+        elif (model.data(index2) == "H") & (self.ct.getLastClusterSel() == ind):
             model.setData(index2, 2)
 
 
     def getFlaggedStatus(self, row):
         model = self.ui.tableView.model()
         index = model.index(row,4)
-        data = model.data(index).toPyObject()
+        data = model.data(index)
         if data == 'U':
             return Qt.Unchecked
         else:
@@ -1078,7 +1078,7 @@ class MainWindow(QtGui.QMainWindow):
     def getSelectedCluster(self, index):
         model = self.ui.tableView.model()
         index = model.index(index,1)
-        cl = int(model.data(index).toPyObject())
+        cl = int(model.data(index))
         return cl
 
 

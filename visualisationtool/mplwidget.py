@@ -403,7 +403,7 @@ class MyTableModel(QAbstractTableModel):
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
-            val = value.toString()
+            val = value #.toString()
 
             if index.column() == 0:
                 self.arraydata[index.row()][0] = self.selstatus[int(val)]

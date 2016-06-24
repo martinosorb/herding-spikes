@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sip
-sip.setapi('QVariant', 1)
+sip.setapi('QVariant', 2)
 import sys
 from WindowDesign import *
 from MainWindow import MainWindow
