@@ -5,72 +5,142 @@ import cython
 import numpy as np
 cimport numpy as np
 cimport cython
-import h5py
 from ctypes import CDLL
 import ctypes
-from datetime import datetime
+from readUtils import openHDF5file, getHDF5params, readHDF5
+import time
+import multiprocessing
+import os
+
+class bcolors: # Only for unix progress output
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
 
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
-        void InitDetection(long nFrames, double nSec, int sf, int NCh, long ti, long int * Indices)
+        void InitDetection(long nFrames, double nSec, int sf, int NCh, long tInc, 
+                           long int * Indices, unsigned int nCPU)
         void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl)
         void openSpikeFile(const char * name)
-        void MedianVoltage(unsigned short * vm)
-        void MeanVoltage(unsigned short * vm)
-        void Iterate(unsigned short * vm, long t0)
+        # void MedianVoltage(unsigned short * vm)
+        void MeanVoltage(unsigned short * vm, int tInc)
+        void Iterate(unsigned short * vm, long t0, int tInc)
         void FinishDetection()
 
 
-def detect(rawfilename, sfd, nDumpFrames):
-    """ Read data from a (custom, any other format would work) hdf5 file and pipe it to the spike detector. """
-    rf = h5py.File(rawfilename + '.hdf5', 'r')
-    cx, cy = rf['x'].value, rf['y'].value
-    x1, x2, y1, y2 = np.min(cx), np.max(cx), np.min(cy), np.max(cy)
-    nRecCh = len(cx)
-    nFrames = len(rf['Ch0'])
-    nSec = nFrames / sfd  # the duration in seconds of the recording
-    sf = int(sfd)
-    nSec = nDumpFrames / sfd
+def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = None, MinSl = None):
 
-    # number of frames to read in  one go
-    # the main bottleneck is reading the data, so this should be large if
-    # memory permits
-    tInc = 20000
-    tCut = int(1.0 * sf / 1000 + 1.0 * sf / 1000 + 6)
+    # Read data from a .brw (HDF5) file
+    rf = openHDF5file(filePath)
+    nFrames, samplingRate, nRecCh, chIndices = getHDF5params(rf)
+   
+    # Duration of the recording in seconds
+    nSec = nFrames / samplingRate
 
-    print("# Sampling rate: " + str(sf))
-    print("# Number of recorded channels: " + str(nRecCh))
-    print("# Analysing frames: " + str(nDumpFrames) + ", Seconds:" +
-          str(nSec) + ", tCut:" + str(tCut) + ", tInc:" + str(tInc))
+    # Number of frames to read in one go (fit to the amount of available memory)
+    tInc = min(nFrames, 50000) # Capped at 5 GB of memory approx.
 
-    # Messy! To be consistent, X and Y have to be swappped
-    cdef np.ndarray[long, mode = "c"] Indices = np.zeros(nRecCh, dtype=long)
-    for i in range(nRecCh):
-        Indices[i] = (cy[i] - 1) + 64 * (cx[i] - 1)
+    # Overlap across iterations
+    tCut = int(0.001*int(samplingRate)) + int(0.001*int(samplingRate)) + 6
 
+    # Number of processors available
+    nCPU = multiprocessing.cpu_count()
+
+    # Start detection
+    print 'Starting detection...'
+    print '# Using', nCPU, 'core(s)'
+    print '# Sampling rate:', samplingRate
+    print '# Number of recorded channels:', nRecCh
+    print '# Analysing frames:', nFrames, 'Seconds:', nSec, 'tCut:', tCut, 'tInc:', tInc
     cdef Detection * det = new Detection()
-    det.InitDetection(nFrames, nSec, sf, nRecCh, tInc, & Indices[0])
-    det.SetInitialParams(9, 5, 0, 8, 3)
 
-    # open output file
-    spikefilename = str.encode(rawfilename + "_Spikes.txt")
+    # Allocate indices and vm
+    cdef np.ndarray[long, mode = "c"] Indices = np.asarray(chIndices, dtype=ctypes.c_long)
+    cdef np.ndarray[unsigned short, mode = "c"] vm = np.zeros((nRecCh * tInc), dtype=ctypes.c_ushort)
+    
+    # Initialise detection algorithm
+    det.InitDetection(nFrames, nSec, int(samplingRate), nRecCh, tInc, &Indices[0], nCPU)
+
+    # Set the parameters: int thres, int maa, int ahpthr, int maxsl,  int minsl
+
+    # Threshold to detect spikes >11 is likely to be real spikes, but can and should be sorted afterwards
+    if not Threshold: 
+        Threshold = 9
+    # Signal should go below that threshold within MaxSl-Slmin frames
+    if not MinAvgAmp:
+        MinAvgAmp = 5
+    # Minimal avg. amplitude of peak (in units of Qd)
+    if not AHPthr:
+        AHPthr = 0
+    # Dead time in frames after peak, used for further testing
+    if not MaxSl:
+        MaxSl = int(samplingRate * 1 / 1000 + 0.5)
+    # Length considered for determining avg. spike amplitude
+    if not MinSl:
+        MinSl = int(samplingRate * 0.3 / 1000 + 0.5)
+
+    det.SetInitialParams(Threshold, MinAvgAmp, AHPthr, MaxSl, MinSl)
+    
+    # Open output file
+    spikefilename = str.encode(os.path.splitext(filePath)[0] + "_SpikesSYCL.txt")
     det.openSpikeFile(spikefilename)
 
-    cdef np.ndarray[unsigned short, ndim = 1, mode = "c"] vm = np.zeros((nRecCh * tInc), dtype=ctypes.c_ushort)
-    startTime = datetime.now()
-    for t0 in range(0, nDumpFrames - tInc, tInc - tCut):
-        if (t0 / tInc) % 100 == 0:
-            print(str(t0 / sf) + " sec")
-        for c in range(nRecCh):
-            vm[c * tInc:c * tInc + tInc] = rf['Ch' +
-                                              str(c)][t0:t0 + tInc].astype(dtype=ctypes.c_ushort)
-        det.MedianVoltage(&vm[0])
-        #det.MeanVoltage( & vm[0])  # a bit faster (maybe)
-        det.Iterate( & vm[0], t0)
+    # Setup timers  
+    readT = medianT = iterateT = 0.0; 
+    
+    # For each chunk of data 
+    t0 = 0
+    while t0 + tInc <= nFrames:
+        t1 = t0 + tInc
+
+        # Display progress bar (unix only)
+        if os.name == 'posix': 
+            displayProgress(t0, t1, nFrames)      
+
+        # Read data
+        print '# Reading', t1-t0, 'frames...'
+        tic = time.time()
+        # Data is indexed by time-step: vm[channel + time * NChannels]
+        # must be inverted in order to match the old .brw format.
+        vm = readHDF5(rf, t0, t1)
+        readT += time.time() - tic
+
+        # Compute median voltage
+        print '# Computing median voltage...'
+        tic = time.time()
+        det.MeanVoltage(&vm[0], tInc) #  det.MedianVoltage(&vm[0]) 
+        medianT += time.time() - tic
+        
+        # Detect spikes
+        print '# Detecting spikes...'
+        tic = time.time()
+        det.Iterate(&vm[0], t0, tInc) # or IterateSYCL
+        iterateT += time.time() - tic
+
+        t0 += tInc - tCut # Advance across time
+        if t0 < nFrames - tCut: # Last chunk can be smaller
+            tInc = min(tInc, nFrames - t0)    
+
     det.FinishDetection()
-    endTime = datetime.now()
-    print('Time taken for detection: ' + str(endTime - startTime))
-    print('Time per frame: ' + str(1000 * (endTime - startTime) / (nDumpFrames)))
-    print('Time per sample: ' + str(1000 *
-                                    (endTime - startTime) / (nRecCh * nDumpFrames)))
+
+    # Display progress bar (unix only)
+    if os.name == 'posix': 
+        displayProgress(t0, t1, nFrames)    
+
+    totalT = readT + medianT + iterateT
+    print '# Elapsed time:', totalT, 's'
+    print '# (Reading:', readT ,'s)'
+    print '# (Median:', medianT,'s)'
+    print '# (Detecting:', iterateT,'s)'
+    print '# (Per frame:', 1000*totalT/nFrames, 'ms)'
+
+def displayProgress(t0, t1, nFrames):
+    os.system('clear')
+    col = int(os.popen('stty size', 'r').read().split()[1])
+    g = np.divide(t0*col, nFrames)
+    b = np.divide((t1-t0)*col, nFrames)
+    k = col - g - b
+    print bcolors.GREEN + '█'*g + bcolors.BLUE +  '█'*b+ bcolors.ENDC +  '█'*k + '\n'

@@ -1,17 +1,13 @@
-#import pyximport
-#pyximport.install()
+# import pyximport
+# pyximport.install()
 
 from detect import detect
-import h5py
-import numpy as np
 
-# raw data file
-rawpath = 'data/'
-rawfile = rawpath+'P29_16_05_14_retina02_left_stim2_smallarray_fullfield_raw3'
-print(rawfile)
+path = '/media/albert/DATA/data/'
+fileName = 'P29_16_05_14_retina01_right_stim1_smallarray_whitenoise100msHDF5.brw'
 
-sampling = 23199.0903585
+# Default call:
+detect(path + fileName)
 
-# run detection
-nDumpFrames = int(sampling * 20)  # nFrames; # how many frames to analyze
-detect(rawfile, sampling, nDumpFrames)
+# Or change any parameter using its name:
+# detect(path + fileName, Threshold = x, MinAvgAmp = x, AHPthr = x., MaxSl = x, MinSl = x)
