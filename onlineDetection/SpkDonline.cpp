@@ -1,7 +1,14 @@
 #include "SpkDonline.h"
 
 namespace SpkDonline {
-Detection::Detection() {}
+Detection::Detection() :
+	// Set default parameters
+	threshold(9), // threshold to detect spikes >11 is likely to be real spikes, but can and should be sorted afterwards
+	AHPthr(0),    // signal should go below that threshold within MaxSl-Slmin frames
+	MaxSl(8),     // dead time in frames after peak, used for further testing
+	MinAvgAmp(5), // minimal avg. amplitude of peak (in units of Qd)
+	MinSl(3)     // length considered for determining avg. spike amplitude
+{}
 
 void Detection::InitDetection(long nFrames, double nSec, int sf, int NCh,
                               long ti, long *Indices) {
