@@ -17,7 +17,7 @@ Software for high density electrophysiology.
 
 # Latest news <a name="news"></a>
 
-* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](https://github.com/martinosorb/herding-spikes/tree/detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
+* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](https://github.com/martinosorb/herding-spikes/tree/detection-cpp). It was developed by [Albert Puente Encinas](https://github.com/albertpuente).
 
 # Sub-projects <a name="Sub-projects"></a>
 
@@ -69,6 +69,7 @@ in the subfolder [visualisationtool](visualisationtool). The program reads files
 
 - [Matthias Hennig](http://homepages.inf.ed.ac.uk/mhennig/index.html): Spike sorting
 - [Oliver Muthmann](mailto:ollimuh@googlemail.com): Spike detection and localisation
+- [Albert Puente Encinas](https://github.com/albertpuente): C++ implementation, optimisation and parallelisation
 - [Martino Sorbaro](http://martinosorb.github.io): Spike sorting
 - [Cesar Juarez Ramirez](mailto:cesaripn2@gmail.com): Visualisation toolkit
 
