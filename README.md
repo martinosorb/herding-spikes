@@ -17,7 +17,7 @@ Software for high density electrophysiology.
 
 # Latest news <a name="news"></a>
 
-* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
+* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](https://github.com/martinosorb/herding-spikes/tree/detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
 
 # Sub-projects <a name="Sub-projects"></a>
 
