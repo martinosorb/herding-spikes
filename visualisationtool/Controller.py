@@ -6,15 +6,15 @@ from DataBase import DataBase
 from matplotlib.backends.qt_compat import QtCore
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-import scipy.special._ufuncs_cxx
-import sklearn.utils.lgamma
-import sklearn.utils.weight_vector
+#from matplotlib.collections import LineCollection
+#import scipy.special._ufuncs_cxx
+#import sklearn.utils.lgamma
+#import sklearn.utils.weight_vector
 import math
 from numpy.linalg import norm
-from PyQt4.QtGui import QColor
+#from PyQt4.QtGui import QColor
 from scipy.spatial import ConvexHull
-from matplotlib.patches import Polygon, Ellipse, CirclePolygon, Circle
+from matplotlib.patches import Polygon, Ellipse, CirclePolygon #, Circle
 from matplotlib.collections import PatchCollection
 
 
@@ -636,8 +636,9 @@ class ActionController():
 
     def handleDataExploration(self,i,x,y,c):
 
-        self.mw.printLog("")
+        i = int(i)
 
+        self.mw.printLog("")
         if self.lastClusterSelected != i:
             if self.lastClusterSelected is not None:
 
@@ -954,17 +955,12 @@ class ActionController():
         self._points = np.append(self._points,cs,axis=0)
 
 
-
-
-
-
-
-
-
     def handlePCAExploration(self,oi,x,y,c):
+        oi = int(oi)
         self.handleSpikeExploration(oi, self.data[0][oi], self.data[1][oi], self.clusterID[oi])
 
     def handleSpikeExploration(self,oi,x,y,c):
+        oi = int(oi)
         self.mw.printLog("")
         if self.spikepoint is not None:
             self.spikepoint = self.mw.deletePoint(self.spikepoint)
@@ -1550,6 +1546,7 @@ class ActionController():
         self.handleChange(i,row)
 
     def onpickexpl(self, event):
+
         x, y = event.mouseevent.xdata, event.mouseevent.ydata
 
         if self.mw.ui.mpl.ntb.isSelectButtonChecked():
@@ -1557,12 +1554,14 @@ class ActionController():
         else:
             i, x, y, c = self.snap2(x,y)
 
-        self.now = time.clock()
+        c = int(c)
 
-        if (self.now - self.past)< 0.5:
-            self.past = self.now
-            return
-        self.past = self.now
+        # self.now = time.clock()
+        # print(self.now - self.past)
+        # if (self.now - self.past)< 0.5:
+        #     self.past = self.now
+        #     return
+        # self.past = self.now
 
         row = self.sortclf[c]
         self.mw.scrollTo(row)
@@ -1683,6 +1682,3 @@ class ActionController():
 
     def getClusterNumber(self, index):
         return self.pointsclust[index][3]
-
-
-

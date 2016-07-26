@@ -4,9 +4,8 @@ import matplotlib
 import os
 import six
 import numpy as np
-import scipy.special._ufuncs_cxx
-
-_fromUtf8 = QtCore.QString.fromUtf8
+#import scipy.special._ufuncs_cxx
+#_fromUtf8 = QtCore.QString.fromUtf8
 
 
 try:
@@ -55,13 +54,15 @@ class NavigationToolbar3(NavigationToolbar2QT, QtWidgets.QToolBar):
         self.mw = mw
 
     def _init_toolbar(self):
-        self.basedir = os.path.join(matplotlib.rcParams['datapath'], 'images')
-
+        #self.basedir = os.path.join(matplotlib.rcParams['datapath'], 'images')
+        iconDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'icons', '')
         for text, tooltip_text, image_file, callback in self.toolitems:
             if text is None:
                 self.addSeparator()
             else:
-                a = self.addAction(self._icon(image_file + '.png'),
+                # a = self.addAction(self._icon(iconDir + image_file + '.png'),
+                #                          text, getattr(self, callback))
+                a = self.addAction(QtGui.QIcon(iconDir + image_file + '.png'),
                                          text, getattr(self, callback))
                 self._actions[callback] = a
                 if callback in ['zoom', 'pan', 'cursorcluster', 'radiomode', 'shapemode', 'selectedmode']:
@@ -70,7 +71,9 @@ class NavigationToolbar3(NavigationToolbar2QT, QtWidgets.QToolBar):
                     a.setToolTip(tooltip_text)
 
         if figureoptions is not None:
-            a = self.addAction(self._icon("qt4_editor_options.png"),
+            # a = self.addAction(self._icon("qt4_editor_options.png"),
+            #                    'Customize', self.edit_parameters)
+            a = self.addAction(QtGui.QIcon("qt4_editor_options.png"),
                                'Customize', self.edit_parameters)
             a.setToolTip('Edit curves line and axes parameters')
 
@@ -381,6 +384,3 @@ class NavigationToolbar3(NavigationToolbar2QT, QtWidgets.QToolBar):
 
         self.draw()
         self.push_current()
-
-
-

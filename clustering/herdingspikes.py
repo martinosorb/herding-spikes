@@ -58,11 +58,15 @@ def ImportInterpolatedList(filenames, shapesrange=None):
         s[i] = g['Sampling'].value
         if shapesrange is None:
             sh = np.append(sh, np.array(g['Shapes'].value))
+            shLen = g['Shapes'].shape[1]
         else:
             sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
-    sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
+    if shapesrange is None:
+        sh = np.reshape(sh, (len(t), shLen))
+    else:
+        sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
     if len(np.unique(s)) > 1:
         raise Warning('Data sets have different sampling rates\n' + str(s))
     A = spikeclass(loc)
@@ -348,15 +352,14 @@ class spikeclass(object):
         """Returns a pair of indices denoting the start and end
         of an experiment. Can currently only be used if data from multiple
         experiments is read with the helper function ImportInterpolatedList."""
-        raise NotImplementedError()
-        # if i+1 < len(self.__expinds):
-        #     final = self.__expinds[i+1]
-        # elif i+1 == len(self.__expinds):
-        #     final = self.NData()
-        # else:
-        #     raise ValueError('There are only ' + len(self.__expinds) +
-        #                      ' datasets.')
-        # return np.arange(self.__expinds[i], self.__expinds[i+1])
+        if i+1<len(self.__expinds):
+            final = self.__expinds[i+1]
+        elif i+1==len(self.__expinds):
+            final = self.NData()
+        else:
+            raise ValueError('There are only '+len(self.__expinds)+' datasets.')
+        return np.arange(self.__expinds[i],self.__expinds[i+1])
+
 
     def ClusterIndices(self, n, exper=None):
         raise NotImplementedError()
@@ -485,6 +488,7 @@ class spikeclass(object):
         MS.fit_predict(fourvector.T)
         self.__ClusterID = MS.labels_
         self.__c = MS.cluster_centers_.T
+        self.__clsizes = itemfreq(self.__ClusterID)[:, 1]
         print("done.")
         stdout.flush()
 
@@ -637,8 +641,9 @@ class spikeclass(object):
         """This is used when applying a filter, to keep track
         of the indices at which new stimulation protocols begin"""
         if len(self.__expinds) > 1:
-            for n, i in enumerate(self.__expinds[1:]):
+            for n, i in enumerate(self.__expinds[1:-1]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
+            self.__expinds[-1] = len(myInds)-1
             print('New experiment indices: ' + str(self.__expinds))
 
     def KeepOnly(self, ind_kept):

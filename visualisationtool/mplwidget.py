@@ -1,28 +1,31 @@
 import string
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, QAbstractTableModel, QVariant, QAbstractItemModel
+from PyQt4.QtCore import Qt, QAbstractTableModel, QAbstractItemModel #, QVariant
 from PyQt4.QtGui import QColor, QPalette, QLabel, QPixmap
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 from PyQt4 import QtCore
 from customtoolbar import NavigationToolbar3
 from customtoolbarpca import NavigationToolbarPCA
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-import scipy.special._ufuncs_cxx
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+#import scipy.special._ufuncs_cxx
+from matplotlib.figure import Figure
 
-
-_fromUtf8 = QtCore.QString.fromUtf8
+#_fromUtf8 = QtCore.QString.fromUtf8
 
 
 class MplCanvas(FigureCanvas):
     def __init__(self):
-        self.fig = plt.figure(figsize=(20, 20))
-        self.ax = self.fig.add_subplot(111)
+        # self.fig = plt.figure(figsize=(20, 20))
+        # plt.ion()
+        self.fig = Figure(figsize=(20,20))#, dpi=100)
         FigureCanvas.__init__(self, self.fig)
         FigureCanvas.setSizePolicy(self,
                                     QtGui.QSizePolicy.Expanding,
                                     QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
+        self.ax = self.fig.add_subplot(111)
+        # self.ax.hold(False)
 
 
 class MplWidget(QtGui.QWidget):
@@ -352,14 +355,10 @@ class MyTableModel(QAbstractTableModel):
         flags = QAbstractItemModel.flags(self, index) ^ QtCore.Qt.ItemIsSelectable
         return flags
 
-
-
     def setColors(self, colors):
         self.color = colors
         self.flagcolors = [self.unFlagColor]*len(colors)
         self.holdcolors = [self.holdOffColor]*len(colors)
-
-
 
     def rowCount(self, parent):
         return len(self.arraydata)
@@ -372,7 +371,7 @@ class MyTableModel(QAbstractTableModel):
 
     def data(self, index, role):
         if not index.isValid():
-            return QVariant()
+            return None #QVariant()
 
         #if (index.row() >= len(self.arraydata))
         elif (role == Qt.DisplayRole) | (role == Qt.EditRole):
@@ -400,15 +399,11 @@ class MyTableModel(QAbstractTableModel):
             elif index.column() in self.sortnumber:
                     return float(self.arraydata[index.row()][index.column()])
 
-
-
-
-
-        return QVariant()
+        return None #QVariant()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
-            val = value.toString()
+            val = value #.toString()
 
             if index.column() == 0:
                 self.arraydata[index.row()][0] = self.selstatus[int(val)]
@@ -434,5 +429,5 @@ class MyTableModel(QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return QVariant(self.headerdata[col])
-        return QVariant()
+            return self.headerdata[col] #QVariant(self.headerdata[col])
+        return None #QVariant()

@@ -1,6 +1,6 @@
 import numpy as np
 import h5py.h5ac
-import scipy.special._ufuncs_cxx
+#import scipy.special._ufuncs_cxx
 
 
 class DataBase():
