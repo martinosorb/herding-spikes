@@ -1,5 +1,8 @@
 Herding Spikes
 ==============
+detection-cpp branch
+--------------------
+
 
 Software for high density electrophysiology.
 
