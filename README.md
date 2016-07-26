@@ -6,17 +6,22 @@ Software for high density electrophysiology.
 ![Spikes](pictures/spikes.png)
 
 # Contents
-1. [Sub-projects](#Sub-projects)
-2. [How to use this software](#howtouse)
+1. [Latest news](#news)
+2. [Sub-projects](#Sub-projects)
+3. [How to use this software](#howtouse)
     1. [Spike detection](#detect)
     2. [Spike sorting](#sort)
     3. [Visualisation](#ui)
-3. [Contributors](#people)
-4. [References](#refs)
+4. [Contributors](#people)
+5. [References](#refs)
+
+# Latest news <a name="news"></a>
+
+* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
 
 # Sub-projects <a name="Sub-projects"></a>
 
- - [onlineDetection](onlineDetection): Online-capable spike detection, done independently on each recording channel.
+ - [onlineDetection](onlineDetection): Very fast spike detection, done independently on each recording channel.
  - [interpolatingDetection](interpolatingDetection): Spike detection with spatial interpolation. Returns cut-outs for detected events from multiple channels, which allows performing spike localisation.
  - [postProcessing](postProcessing): Programs for removing duplicate events in spikes detected with the online method, and localise spikes detected with the interpolation method.
  - [clustering](clustering): Perform spike sorting by location and PCA on interpolated data.
@@ -31,7 +36,7 @@ If you are interested in using this software and have questions or problems, get
 The project *[onlineDetection](onlineDetection)* provides an efficient and reliable algorithm for detecting spikes in single channels.
 Main features are a robust noise estimate based on signal percentiles rather than moments, and fast integer based computations allowing real-time performance even when recording 1000s of channels simultaneously. While originally developed for high density multielectrode arrays, we expect this to perform well on most extracellular recordings.
 
-The current implementation in the master branch only reads 3Brain [Brainwave](http://www.3brain.com/index.php/5/Downloads) files. You can switch to the 'detection-cpp' branch for a first working version that will accept any file format.
+The current implementation in the master branch only reads 3Brain [Brainwave](http://www.3brain.com/index.php/5/Downloads) files. You can switch to the [detection-cpp branch](detection-cpp) branch for a working version that will accept any file format.
 
 ## Spike sorting on large scale, high density multielectrode arrays <a name="sort"></a>
 
