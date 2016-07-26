@@ -1,6 +1,3 @@
-#import pyximport
-#pyximport.install()
-
 from interpDetect import interpDetect
 
 rawpath = '/media/albert/DATA/data/'
