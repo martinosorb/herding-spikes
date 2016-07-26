@@ -7,7 +7,7 @@ Reference: J.-O. Muthmann, H. Amin, E. Sernagor, A. Maccione, D. Panas, L. Berdo
 
 Note this implementation is currently only compatible with the old .brw file format used by 3Brain to store Biocam4096 recordings with Brainwave 2.0.
 
-A generic version with a python interface is under development. To use this code, switch to the [detection-cpp branch](detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
+A generic version with a python interface is under development. To use this code, switch to the [detection-cpp branch](https://github.com/martinosorb/herding-spikes/tree/detection-cpp). It was developed by [Albert Puente](https://github.com/albertpuente).
 
 ## Installation and use
 
