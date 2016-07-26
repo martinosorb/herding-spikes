@@ -4,10 +4,10 @@ import numpy
 import os
 
 if os.name == 'nt':
-    print "OS: Windows"
+    print("OS: Windows")
     extraCompArgs = ['/DEBUG, /O2']
 else:
-    print "OS: Unix \ Others"
+    print("OS: Unix \ Others")
     extraCompArgs = ['-std=c++11', '-O3']
 
 long_descr = """`See
