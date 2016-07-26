@@ -1,10 +1,11 @@
 Herding Spikes
 ==============
-detection-cpp branch
---------------------
-
 
 Software for high density electrophysiology.
+
+detection-cpp branch
+--------------------
+This branch has beta C++/Python code for online and interpolation detection.
 
 ## Sub-projects
 
