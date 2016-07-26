@@ -11,11 +11,11 @@ InterpDetection::InterpDetection() {
     Acal=3000;
     NSpikes4 = 0;
     NSpikes5 = 0;
-}   
+}
 
 int* InterpDetection::SetInitialParams (long nFrames, double nSec, int sf, double sfd, int NCh, int* Indices) {
 
-    
+
     dfTI = new int[3];
     Aglobal = new int[tInc];
     Aglobaldiff = new int[tInc];
@@ -202,8 +202,8 @@ int* InterpDetection::SetInitialParams (long nFrames, double nSec, int sf, doubl
     //sortAvg= new int[NChannels][2];
     //Avgs1b= new int[NChannels][];
     Avgs3= new int[NChannels];
-    
-    // Parameters    
+
+    // Parameters
     float detection_threshold = 6.0;
     float repolarization_threshold = 0.0;
     // bool recalibration = true; // ! currently used
@@ -212,7 +212,7 @@ int* InterpDetection::SetInitialParams (long nFrames, double nSec, int sf, doubl
     float cutoutPostPeak = 3*sfi*FrameDt; // 1.71
     float smoothing_kernel = (float) (sf/5000.0+2.0)*FrameDt; // 0.43
     bool measure_autocorrelation = false;
-    
+
     // Set the parameters
     threshold = (int)(detection_threshold*AmpScale);
     //thr5 = (threshold + 2) / 2;
@@ -338,7 +338,7 @@ int* InterpDetection::SetInitialParams (long nFrames, double nSec, int sf, doubl
     vSmth=new int[NChannels];
     //TauF1 = 2 * TauFilt1 * dfAbs;
 
-    // Log    
+    // Log
 
     for (int i=0;i<NChannels;i++){
         Qd[i]=600;
@@ -379,7 +379,7 @@ int* InterpDetection::SetInitialParams (long nFrames, double nSec, int sf, doubl
     }
     return dfTI;
 }
-      
+
 void InterpDetection::openFiles(const std::string& name) {
     w.open((name + "_INT_Spikes.txt").c_str()); // For spikes
     wShapes.open((name + "_INT_Shapes.txt").c_str()); // For raw data
@@ -388,7 +388,7 @@ void InterpDetection::openFiles(const std::string& name) {
     wInfo.open((name + "_INT_Info.txt").c_str()); // For other stuff
     wMean.open((name + "_INT_Avg.txt").c_str()); // For avg. Voltage
 }
-       
+
 void InterpDetection::AvgVoltageDefault(unsigned short* vm, long t0, int t, int tInc) { //want to compute an approximate 33 percentile
     //can average over 2 consecutive frames
     //each time called, I should take the next 4 frames of vm (all channels)
@@ -742,7 +742,7 @@ void InterpDetection::InitialEstimation(unsigned short* vm, long t0) { //use thi
             for (int t=tx; dfSign*t<dfSign*tx+(NFblocks+1)*4*TauFilt1; t+=2*TauFilt1*dfSign) {
                 AvgVoltageDefault (vm, t0, t, tInc);
             }
-        } 
+        }
         for (int t=tx; dfSign*t<dfSign*ti; t+=df) {
             tA = t / dfAbs;
             for (int i=1-recalibTrigger; i<NChannels; i++) {//loop across channels
@@ -894,14 +894,14 @@ void InterpDetection::StartDetection(unsigned short* vm, long t0, long nFrames, 
     wMean.BaseStream.Seek(0, SeekOrigin.Begin);   // Set the file pointer to the start.
     */
     //write some info
-    
+
     wInfo << "# Number of frames:\n" << nFrames/dfAbs << "\n";
     wInfo << "# Duration (s):\n" << nSec << "\n";
     wInfo << "# Sampling rate:\n" << sfd/dfAbs  << "\n";
     wInfo << "# Threshold scaling:\n" << AmpScale << "\n";
     wInfo << "# Amplitude scaling:\n" << Ascale << "\n";
-    wInfo << "# Detection threshold*" << AmpScale << "\n" << threshold << "\n";
-    wInfo << "# Repolarization threshold*" << AmpScale << "\n" << AHPthr << "\n";
+    wInfo << "# Detection threshold*" << AmpScale << ":\n" << threshold << "\n";
+    wInfo << "# Repolarization threshold*" << AmpScale << ":\n" << AHPthr << "\n";
     wInfo << "# Recalibration trigger:\n" << recalibTrigger << "\n";
     wInfo << "# Cutouts:\n" << CutPre << " " << CutPost << " " << tCut << " " << tCutLong << " " << df << "\n";
     wInfo << "# Smoothing window (detection):\n" << tSmth << "\n";
@@ -1114,7 +1114,7 @@ void InterpDetection::Iterate(unsigned short* vm, long t0, int tInc) {
         //SqIglobal+=Aglobaldiff[tA]*Aglobaldiff[tA];
         wMean << Aglobal[tA] << "\n";
         // RECALIBRATION EVENTS
-        if (recalibTrigger==0){ 
+        if (recalibTrigger==0){
             if (vm[t]<2500) {//write spikes after each recalibration event_newfiles:<2500_oldfiles:<1500
                 if (Acal > 2000) {
                     wInfo << (t+t0)/dfAbs;//write time of recalibration event
@@ -1127,7 +1127,7 @@ void InterpDetection::Iterate(unsigned short* vm, long t0, int tInc) {
                         }
                     }
                     wInfo << "\n";
-                    std::cout << (t+t0)/Sampling/dfAbs << " sec" << std::endl;// to monitor progress of spike detection                    
+                    std::cout << (t+t0)/Sampling/dfAbs << " sec" << std::endl;// to monitor progress of spike detection
                     Acal=0;//to remember last recalibration event
                     for (int i=0; i<NChannels; i++) {
                         FVsbias[i] += FVbias[i];//want to see whether this matches the correlation structure
@@ -1943,7 +1943,7 @@ void InterpDetection::Iterate(unsigned short* vm, long t0, int tInc) {
     }
 }
 
-void InterpDetection::FinishDetection(unsigned short* vm, int skipLast, int tInc) { 
+void InterpDetection::FinishDetection(unsigned short* vm, int skipLast, int tInc) {
 
     if (df > 0) {
         for (int t=tf; t<df*(192 - 1)-skipLast; t+=df) {//loop over data, will be removed for an online algorithm
