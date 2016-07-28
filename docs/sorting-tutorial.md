@@ -63,8 +63,8 @@ contains all detected spikes (614,000 in this example), along with their coordin
 
 The script also produces a several of images summarising the data:
 
-<img src="./pictures/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5_INT_Density_repolarizing.png" alt="Drawing" style="width: 200px;"/>
-<img src="./pictures/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5_INT_Density_amplitudes.png" alt="Drawing" style="width: 200px;"/>
+<img src="./pictures/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5_INT_Density_repolarizingS.png" alt="Drawing" style="width: 200px;"/>
+<img src="./pictures/P29_16_05_14_retina02_left_stim3_fullarray_fullfieldHDF5_INT_Density_amplitudesS.png" alt="Drawing" style="width: 200px;"/>
 
 These two pictures show the event cont (left) and average event amplitudes (right). The shape of the recorded retina, including incisions and the optic disk (left, middle) can be seen.
 
