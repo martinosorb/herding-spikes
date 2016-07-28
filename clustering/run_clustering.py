@@ -11,7 +11,7 @@ Folder, Filename = os.path.split(sys.argv[1])
 
 O = ImportInterpolated(sys.argv[1])
 scorePCA = O.ShapePCA(ncomp=2, white=True)
-O.CombinedMeanShift(h, alpha, PrincComp=scorePCA)
+O.CombinedMeanShift(h, alpha, PrincComp=scorePCA, mbf=10)
 print('Found ' + str(O.NClusters()) +
       ' clusters for ' + str(O.NData()) + ' spikes.')
 O.Save(Folder + '/' + Filename.replace('.hdf5',
