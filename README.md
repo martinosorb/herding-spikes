@@ -3,12 +3,6 @@ Herding Spikes
 
 Software for high density electrophysiology.
 
-detection-cpp branch
---------------------
-This branch has beta C++/Python code for online and interpolation detection.
-
-Return to the [master branch](https://github.com/martinosorb/herding-spikes/tree/master).
-
 ![Spikes](pictures/spikes.png)
 
 # Contents
@@ -23,7 +17,7 @@ Return to the [master branch](https://github.com/martinosorb/herding-spikes/tree
 
 # Latest news <a name="news"></a>
 
-* We now have beta implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. To use this code, switch to the [detection-cpp branch](https://github.com/martinosorb/herding-spikes/tree/detection-cpp). It was developed by [Albert Puente Encinas](https://github.com/albertpuente).
+* There is now an implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. This improvement was done by [Albert Puente Encinas](https://github.com/albertpuente).
 
 # Sub-projects <a name="Sub-projects"></a>
 
