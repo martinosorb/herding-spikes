@@ -31,7 +31,7 @@ Software for high density electrophysiology.
 
 # How to use this software <a name="howtouse"></a>
 
-If you are interested in using this software and have questions or problems, get in touch with [us](http://homepages.inf.ed.ac.uk/mhennig/contact/).
+If you are interested in using this software and have questions or problems, get in touch with [us](http://homepages.inf.ed.ac.uk/mhennig/contact/). All code is released under GPL-2.0.
 
 ## Fast and simple spike detection <a name="detect"></a>
 
