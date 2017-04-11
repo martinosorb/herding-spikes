@@ -3,7 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
-
+#include <cmath>
 namespace SpkDonline {
 
     class Detection {
