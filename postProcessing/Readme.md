@@ -43,7 +43,7 @@ Only retain events with largest amplitudes in a close spatiotemporal surrounding
 
 ## Data plotting
 
-A couple of elementary methods for visualizing the results are provided in SpkD_plot.py. These are
+A couple of elementary methods for visualizing the results are provided in `SpkD_plot_v24.py`. These are
 
 `SpkD_plot.Rasterplot` Creates colour coded rasters. A projection of the spatial locations on the x- or y-axis is plotted against time, and the colour can be used for any other property of events (location, amplitude, probability...).
 
