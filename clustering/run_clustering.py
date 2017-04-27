@@ -7,7 +7,7 @@ from herdingspikes import spikeclass, ImportInterpolated
 h = 0.3  # kernel size
 alpha = 0.28  # scaling of PCA relative to location
 
-Folder, Filename = os.path.split(sys.argv[1])
+Folder, Filename = os.path.split(os.path.abspath(sys.argv[1]))
 
 O = ImportInterpolated(sys.argv[1])
 scorePCA = O.ShapePCA(ncomp=2, white=True)
