@@ -7,7 +7,7 @@ cimport numpy as np
 cimport cython
 from ctypes import CDLL
 import ctypes
-from readUtils import openHDF5file, getHDF5params, readHDF5t
+from readUtils import openHDF5file, getHDF5params, readHDF5t_100, readHDF5t_101
 import time
 import os
 
@@ -26,8 +26,13 @@ cdef extern from "SpkDslowFilter.h" namespace "SpkDslowFilter":
 def interpDetect(filePath):
     # Read data from a .brw (HDF5) file
     rf = openHDF5file(filePath)
-    nFrames, samplingRate, nRecCh, chIndices = getHDF5params(rf)
-    
+    nFrames, samplingRate, nRecCh, chIndices, file_format = getHDF5params(rf)
+
+    if file_format == '100':
+        read_function = readHDF5t_100
+    else:
+        read_function = readHDF5t_101
+
     # Duration of the recording in seconds
     nSec = nFrames / samplingRate
 
@@ -37,20 +42,20 @@ def interpDetect(filePath):
 
     # Allocate indices
     cdef np.ndarray[int, mode = "c"] Indices = np.asarray(chIndices, dtype=ctypes.c_int)
-    
+
     # Start detection
-    cdef InterpDetection * SpkD = new InterpDetection() 
-    
+    cdef InterpDetection * SpkD = new InterpDetection()
+
     dfTI = SpkD.SetInitialParams(nFrames, nSec, int(samplingRate), samplingRate, nRecCh, &Indices[0]);
     SpkD.openFiles( str.encode(os.path.splitext(filePath)[0]) );
-    
+
     tInc = dfTI[2]
-    
+
     # Allocate vm and vmx
     cdef np.ndarray[unsigned short, mode = "c"] vm = np.zeros(nRecCh*tInc, dtype=ctypes.c_ushort)
 
-    # Setup timers  
-    initialEstT = startT = loopT = finishT = 0.0; 
+    # Setup timers
+    initialEstT = startT = loopT = finishT = 0.0;
 
     if dfTI[0] > 0:
         t1 = 0
@@ -59,63 +64,74 @@ def interpDetect(filePath):
 
         tic = time.time()
         for t0 in xrange(0, min(200*(dfTI[1]),nFrames-tInc), dfTI[1]):
-            vm = readHDF5t(rf, t0, t0 + tInc) 
+            # vm = readHDF5t(rf, t0, t0 + tInc)
+            vm = read_function(rf, t0, t0 + tInc, nRecCh)
             SpkD.InitialEstimation(&vm[0], t0)
         initialEstT += time.time() - tic
 
         print 'Start detection...'
         tic = time.time()
-        vm = readHDF5t(rf, 0, tInc)
+        # vm = readHDF5t(rf, 0, tInc)
+        vm = read_function(rf, 0, tInc, nRecCh)
+
         SpkD.StartDetection (&vm[0], 0, nFrames, nSec, samplingRate, &Indices[0])
         SpkD.Iterate (&vm[0], 0, tInc)
-        t1 += dfTI[1]        
+        t1 += dfTI[1]
         startT += time.time() - tic
 
         tic = time.time()
         for t0 in xrange(dfTI[1], nFrames-tInc, dfTI[1]):
-            vm = readHDF5t(rf, t0, t0 + tInc)
+            # vm = readHDF5t(rf, t0, t0 + tInc)
+            vm = read_function(rf, t0, t0 + tInc, nRecCh)
             SpkD.Iterate (&vm[0], t0, tInc)
-            t1 += dfTI[1]          
+            t1 += dfTI[1]
         loopT += time.time() - tic
 
         tic = time.time()
         if t1 < nFrames - tInc + dfTI[1] - 1:
-            vm = readHDF5t(rf, t1, nFrames)     
+            # vm = readHDF5t(rf, t1, nFrames)
+            vm = read_function(rf, t1, nFrames, nRecCh)
             SpkD.skipLastReverse ((int) (tInc - nFrames + t1))
             SpkD.Iterate (&vm[0], t1, nFrames - t1)
 
-        vm = readHDF5t(rf, t1, nFrames)
+        # vm = readHDF5t(rf, t1, nFrames)
+        vm = read_function(rf, t1, nFrames, nRecCh)
         SpkD.FinishDetection (&vm[0], (int)(tInc - nFrames + t1), nFrames - t1)
         finishT += time.time() - tic
 
     else:
         t1 = nFrames
-        
+
         print 'Initial estimations...'
 
         for t0 in xrange(nFrames, max(tInc,nFrames-200*dfTI[1]), -dfTI[1]):
-            vm = readHDF5t(rf, t0 - tInc, t0)
+            # vm = readHDF5t(rf, t0 - tInc, t0)
+            vm = read_function(rf, t0 - tInc, t0, nRecCh)
             SpkD.InitialEstimation (&vm[0], t0 - tInc)
 
         print 'Start detection...'
-        vm = readHDF5t(rf, nFrames - tInc, nFrames)
+        # vm = readHDF5t(rf, nFrames - tInc, nFrames)
+        vm = read_function(rf, nFrames - tInc, nFrames, nRecCh)
         SpkD.StartDetection (&vm[0], nFrames-tInc, nFrames, nSec, samplingRate, &Indices[0])
         SpkD.Iterate (&vm[0], nFrames-tInc, tInc)
         t1 -= dfTI[1]
 
         for t0 in xrange (nFrames-dfTI[1], tInc, -dfTI[1]):
-            vm = readHDF5t(rf, t0 - tInc, t0)
+            # vm = readHDF5t(rf, t0 - tInc, t0)
+            vm = read_function(rf, t0 - tInc, t0, nRecCh)
             SpkD.Iterate (&vm[0], t0 - tInc, tInc)
             t1 -= dfTI[1]
 
         if t1 > tInc - dfTI[1] + 1:
             SpkD.skipLastReverse ((int)(tInc - t1))
-            vm = readHDF5t(rf, 0, t1)
+            # vm = readHDF5t(rf, 0, t1)
+            vm = read_function(rf, 0, t1, nRecCh)
             SpkD.Iterate (&vm[0], 0, t1)
-            
-        vm = readHDF5t(rf, 0, t1)
+
+        # vm = readHDF5t(rf, 0, t1)
+        vm = read_function(rf, 0, t1, nRecCh)
         SpkD.FinishDetection (&vm[0], (int)(tInc - t1), t1)
-    
+
     print '# Initialisation time:', initialEstT, 's'
     print '# Start time:', startT, 's'
     print '# Loop time:', loopT, 's'
