@@ -56,6 +56,6 @@ def readHDF5t_100(rf, t0, t1, nch):
 def readHDF5t_101(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
-        return 4095 - rf['3BData/Raw'][nch*t0:nch*t1].flatten('F')
+        return 4095 - rf['3BData/Raw'][nch*t0:nch*t1].reshape((-1,4096),order='C').flatten('F')
     else: # Reversed read
-        return 4095 - rf['3BData/Raw'][nch*t1:nch*t0].flatten('F')
+        return 4095 - rf['3BData/Raw'][nch*t1:nch*t0].reshape((-1,4096),order='C').flatten('F')
