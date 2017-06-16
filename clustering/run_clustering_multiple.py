@@ -51,7 +51,7 @@ if __name__ == "__main__":
         elif opt in ("-i", "--ifile"):
             filemask = arg
         elif opt in ("-m", "--mbf"):
-            mbf = arg
+            mbf = int(arg)
         elif opt in ("-a", "--align"):
             align = bool(arg)
         elif opt in ("-p", "--presort"):
@@ -79,19 +79,26 @@ if __name__ == "__main__":
     except:
         print('error reading ' + sfs[0])
 
-    # check file type
-    f  = h5py.File(sfs[0],'r')
-    if not any([k=='AmplitudeThresholds' for k in f.keys()]):
-        print('This is not the correct file format (todo: import already sorted files)')
-        sys.exit(2)
-    f.close()
-
     if(len(sfs) > 1):
         multiFile = True
-        O = ImportInterpolatedList(sfs)
     else:
         multiFile = False
-        O = ImportInterpolated(sfs[0])
+
+    # check file type and load the data (clumsy)
+    f = h5py.File(sfs[0],'r')
+    keys = f.keys()
+    if not any([k=='AmplitudeThresholds' for k in keys]):
+        print('Loading from previously clustered file(s)')
+        if multiFile == True:
+            O = LoadMultipleClustered(sfs, shapesrange=[0,26])
+        else:
+            O = spikeclass(sfs[0])
+    else:
+        if(len(sfs) > 1):
+            O = ImportInterpolatedList(sfs)
+        else:
+            O = ImportInterpolated(sfs[0])
+    f.close()
 
     outpostfix = '_clusteredX_' + str(h) + '_' + str(alpha) + '_' + str(mbf)
     if align == True:
