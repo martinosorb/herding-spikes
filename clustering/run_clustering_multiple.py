@@ -29,7 +29,7 @@ if __name__ == "__main__":
     align = False
     # set to True if spikes should be pre-filtered, advisable at low samplig
     # rates
-    presortSpikes = True
+    presort = True
     # set to True if shapes should not be saved (smaller file)
     noShapes = False
     # relative weight of PCA in clustering
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         outpostfix = outpostfix + '_align'
     if multiFile == True:
         outpostfix = outpostfix + '_multi'
-    if presortSpikes == True:
+    if presort == True:
         outpostfix = outpostfix + '_presorted2'
     if noShapes == True:
         outpostfix = outpostfix + '_noshapes'
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         print("done.")
 
     # presort, remove noise
-    if presortSpikes == True:
+    if presort == True:
         print("Selecting good spikes...",)
         shcl = ShapeClassifier(O)
         badshape, indbad = shcl.BadShapesByDensity(nbins=[64, 64], percentile=0.5, maxn=2000, min_thr=5, normalise=False)
