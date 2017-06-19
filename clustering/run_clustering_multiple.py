@@ -53,9 +53,9 @@ if __name__ == "__main__":
         elif opt in ("-m", "--mbf"):
             mbf = int(arg)
         elif opt in ("-a", "--align"):
-            align = bool(arg)
+            align = bool(int(arg))
         elif opt in ("-p", "--presort"):
-            presort = bool(arg)
+            presort = bool(int(arg))
 
     try:
         sfs = glob.glob(filemask)
