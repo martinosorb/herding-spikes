@@ -28,7 +28,7 @@ def interpDetect(filePath):
     rf = openHDF5file(filePath)
     nFrames, samplingRate, nRecCh, chIndices, file_format = getHDF5params(rf)
 
-    if file_format == '100':
+    if file_format == 100:
         read_function = readHDF5t_100
     else:
         read_function = readHDF5t_101

@@ -76,6 +76,46 @@ def ImportInterpolatedList(filenames, shapesrange=None):
     A._spikeclass__expinds = inds
     return A
 
+def LoadMultipleClustered(filenames, shapesrange=None):
+    """ Helper function to read in spike data from a list of previosuly clustered hdf5 files.
+    Returns a class object which keeps track of the indices where each file begins.
+    """
+    loc = np.array([[], []], dtype=float)
+    t = np.array([], dtype=int)
+    # sh = np.array([[], []], dtype=int)
+    sh = np.array([], dtype=int)
+    inds = np.zeros(len(filenames) + 1, dtype=int)
+    s = np.zeros(len(filenames))
+    for i, f in enumerate(filenames):
+        g = h5py.File(f, 'r')
+        print('Reading file ' + f)
+        loc = np.append(loc, g['data'].value, axis=1)
+        inds[i] = len(t)  # store index of first spike
+        t = np.append(t, np.floor(g['times'].value).astype(int))
+        s[i] = g['Sampling'].value
+        if shapesrange is None:
+            # print('shLen', g['shapes'].shape, sh.shape)
+            #sh = np.append(sh, g['shapes'].value, axis=0)
+            sh = np.append(sh, g['shapes'].value.T)#, axis=0)
+            shLen = g['shapes'].shape[0]
+            print('shLen',shLen, g['shapes'].shape, sh.shape)
+        else:
+            sh = np.append(sh, np.array(g['shapes'].value)[shapesrange[0]:shapesrange[1],:].T)
+        g.close()
+    inds[len(filenames)] = len(t)
+    if shapesrange is None:
+        sh = np.reshape(sh, (len(t), shLen))
+    else:
+        sh = np.reshape(sh, (len(t), shapesrange[1] - shapesrange[0]))
+    if len(np.unique(s)) > 1:
+        raise Warning('Data sets have different sampling rates\n' + str(s))
+    A = spikeclass(loc)
+    A.LoadTimes(t)
+    A.SetSampling(s[0])
+    A.LoadShapes(sh.T)
+    A._spikeclass__expinds = inds
+    return A
+
 
 def _normed(X):
     return X / np.max(np.abs(X), axis=0)
