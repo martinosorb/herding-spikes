@@ -90,14 +90,15 @@ if __name__ == "__main__":
     if not any([k=='AmplitudeThresholds' for k in keys]):
         print('Loading from previously clustered file(s)')
         if multiFile == True:
-            O = LoadMultipleClustered(sfs, shapesrange=[0,26])
+            O = LoadMultipleClustered(sfs, shapesrange=[0,shapeLenth])
         else:
-            O = spikeclass(sfs[0])
+            O = spikeclass(sfs[0], shapesrange=[0,shapeLenth])
     else:
+        print('Loading localised (unclustered) spikes')
         if(len(sfs) > 1):
-            O = ImportInterpolatedList(sfs)
+            O = ImportInterpolatedList(sfs, shapesrange=[0,shapeLenth])
         else:
-            O = ImportInterpolated(sfs[0])
+            O = ImportInterpolated(sfs[0], shapesrange=[0,shapeLenth])
     f.close()
 
     outpostfix = '_clusteredX_' + str(h) + '_' + str(alpha) + '_' + str(mbf)
