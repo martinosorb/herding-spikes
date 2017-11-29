@@ -145,15 +145,17 @@ class spikeclass(object):
                     if 'centres' in g.keys() else np.array([])
                 self.__times = np.array(g['times']) \
                     if 'times' in g.keys() else np.array([])
-                self.__shapes = np.array(g['shapes']) \
+                self.__shapes = g['shapes'] \
                     if 'shapes' in g.keys() else np.array([])
+                # self.__shapes = np.array(g['shapes']) \
+                #     if 'shapes' in g.keys() else np.array([])
                 self.__colours = np.array([])
                 self.__sampling = g['Sampling'].value \
                     if 'Sampling' in g.keys() else np.array([])
                 self.__expinds = g['expinds'].value \
                     if 'expinds' in g.keys() else np.array([0])
                 self.__clsizes = []
-                g.close()
+                # g.close()
             else:
                 givendata = args[0]
                 ndata = np.shape(givendata)[1]
@@ -489,6 +491,7 @@ class spikeclass(object):
             print(str(self.NData()) +
                   " spikes, using 1Mio shapes randomly sampled...")
             inds = np.random.choice(self.NData(), int(1e6), replace=False)
+            inds.sort()
             p.fit(self.Shapes()[offset:upto, inds].T)
             # compute projections
             fit = p.transform(self.Shapes()[offset:upto, :].T).T
@@ -545,6 +548,7 @@ class spikeclass(object):
         if newn < self.NData():
             ind = np.random.choice(range(self.NData()),
                                    size=newn, replace=False)
+            ind.sort()
             self.KeepOnly(ind)
             print('RemoveData removed ' +
                   str(initialn - self.NData()) +
