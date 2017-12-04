@@ -498,7 +498,7 @@ class spikeclass(object):
             inds = np.random.choice(self.NData(), fit_size, replace=False)
             inds.sort()
             p.fit(list(self.__shapes[offset:upto, inds].T))
-            print("computing projections in chunks of "str(chunk_size)+"...")
+            print("computing projections in chunks of "+str(chunk_size)+"...")
             # compute projections in chunks
             # fit = p.transform(self.Shapes()[offset:upto, :].T).T
             fit = np.empty((ncomp, self.NData()))
