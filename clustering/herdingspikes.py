@@ -60,7 +60,8 @@ def ImportInterpolatedList(filenames, shapesrange=None):
             sh = np.append(sh, np.array(g['Shapes'].value))
             shLen = g['Shapes'].shape[1]
         else:
-            sh = np.append(sh, np.array(g['Shapes'].value)[:, shapesrange[0]:shapesrange[1]])
+            sh = np.append(sh, np.array(g['Shapes'].value)[
+                           :, shapesrange[0]:shapesrange[1]])
         g.close()
     inds[len(filenames)] = len(t)
     if shapesrange is None:
@@ -75,6 +76,7 @@ def ImportInterpolatedList(filenames, shapesrange=None):
     A.LoadShapes(sh.T)
     A._spikeclass__expinds = inds
     return A
+
 
 def LoadMultipleClustered(filenames, shapesrange=None):
     """ Helper function to read in spike data from a list of previosuly clustered hdf5 files.
@@ -96,11 +98,12 @@ def LoadMultipleClustered(filenames, shapesrange=None):
         if shapesrange is None:
             # print('shLen', g['shapes'].shape, sh.shape)
             #sh = np.append(sh, g['shapes'].value, axis=0)
-            sh = np.append(sh, g['shapes'].value.T)#, axis=0)
+            sh = np.append(sh, g['shapes'].value.T)  # , axis=0)
             shLen = g['shapes'].shape[0]
-            print('shLen',shLen, g['shapes'].shape, sh.shape)
+            print('shLen', shLen, g['shapes'].shape, sh.shape)
         else:
-            sh = np.append(sh, np.array(g['shapes'].value)[shapesrange[0]:shapesrange[1],:].T)
+            sh = np.append(sh, np.array(g['shapes'].value)[
+                           shapesrange[0]:shapesrange[1], :].T)
         g.close()
     inds[len(filenames)] = len(t)
     if shapesrange is None:
@@ -394,14 +397,14 @@ class spikeclass(object):
         """Returns a pair of indices denoting the start and end
         of an experiment. Can currently only be used if data from multiple
         experiments is read with the helper function ImportInterpolatedList."""
-        if i+1<len(self.__expinds):
-            final = self.__expinds[i+1]
-        elif i+1==len(self.__expinds):
+        if i + 1 < len(self.__expinds):
+            final = self.__expinds[i + 1]
+        elif i + 1 == len(self.__expinds):
             final = self.NData()
         else:
-            raise ValueError('There are only '+len(self.__expinds)+' datasets.')
-        return np.arange(self.__expinds[i],self.__expinds[i+1])
-
+            raise ValueError('There are only ' +
+                             len(self.__expinds) + ' datasets.')
+        return np.arange(self.__expinds[i], self.__expinds[i + 1])
 
     def ClusterIndices(self, n, exper=None):
         raise NotImplementedError()
@@ -466,9 +469,9 @@ class spikeclass(object):
             alShapes[:, idxd] = np.roll(alShapes[:, idxd], d, axis=0)
         self.LoadShapes(alShapes)
 
-    def ShapePCA(self, ncomp=None, white=False, return_exp_var=False, offset=0, upto=0):
+    def ShapePCA(self, ncomp=None, white=False, return_exp_var=False, offset=0, upto=0, chunk_size=1000000, fit_size=10000):
         """Compute PCA projections of spike shapes.
-        If there are more than 1Mio data points, randomly sample 1Mio shapes and compute PCA from this subset only. Projections are then returned for all shapes.
+        If there are more than 1Mio data points, randomly sample shapes and compute PCA from this subset only, and project in chunks. Chunk/data sizes are adjustable to maximise speed/precision trade-off. Projections are then returned for all shapes.
 
         Arguments:
         ncomp : the number of components to return
@@ -476,6 +479,8 @@ class spikeclass(object):
         return_exp_var : also return ratios of variance explained
         offset : number of frames to ignore at the beginning of spike shapes (at high sampling rates shapes may start quite early)
         upto : ignore frames beyond this value (default 0, use the whole shape)
+        chunk_size : size of data chunks used to compute projections when more than 1Mio spikes
+        fit_size : number of spikes used for fitting when more than 1Mio spikes
 
         Returns:
         fit : Projections for all shapes and the number of chosen dimensions.
@@ -489,12 +494,17 @@ class spikeclass(object):
         p = PCA(n_components=ncomp, whiten=white)
         if self.NData() > 1e6:
             print(str(self.NData()) +
-                  " spikes, using 1Mio shapes randomly sampled...")
-            inds = np.random.choice(self.NData(), int(1e6), replace=False)
+                  " spikes, using "+str(fit_size)+" shapes randomly sampled...")
+            inds = np.random.choice(self.NData(), fit_size, replace=False)
             inds.sort()
-            p.fit(self.Shapes()[offset:upto, inds].T)
-            # compute projections
-            fit = p.transform(self.Shapes()[offset:upto, :].T).T
+            p.fit(list(self.__shapes[offset:upto, inds].T))
+            print("computing projections in chunks of "str(chunk_size)+"...")
+            # compute projections in chunks
+            # fit = p.transform(self.Shapes()[offset:upto, :].T).T
+            fit = np.empty((ncomp, self.NData()))
+            for i in range(self.NData() // chunk_size + 1):
+                fit[:, i * chunk_size:(i + 1) * chunk_size] = p.transform(
+                    np.array(self.__shapes[offset:upto, i * chunk_size:(i + 1) * chunk_size].T)).T
         else:
             print("using all " + str(self.NData()) + " shapes...")
             fit = p.fit_transform(self.Shapes()[offset:upto, :].T).T
@@ -687,7 +697,7 @@ class spikeclass(object):
         if len(self.__expinds) > 1:
             for n, i in enumerate(self.__expinds[1:-1]):
                 self.__expinds[n + 1] = np.where(myInds >= i)[0][0]
-            self.__expinds[-1] = len(myInds)-1
+            self.__expinds[-1] = len(myInds) - 1
             print('New experiment indices: ' + str(self.__expinds))
 
     def KeepOnly(self, ind_kept):
