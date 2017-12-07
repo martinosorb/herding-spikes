@@ -1,6 +1,6 @@
-# 3Brain 3rd gen .brw (HDF5) 
+# 3Brain 3rd gen .brw (HDF5)
 
-import h5py
+import h5py, warnings
 
 def openHDF5file(path):
     return h5py.File(path, 'r')
@@ -22,25 +22,41 @@ def getHDF5params(rf):
     # nChipCh = nRows * nCols # Total number of channels
 
     # Get the actual number of channels used in the recording
-    nRecCh = len(rf['3BData/Raw'][0])
+    file_format = rf['3BData'].attrs.get('Version')
+    if file_format == 100:
+        nRecCh = len(rf['3BData/Raw'][0])
+        raise Warning('This may go wrong!')
+    elif file_format == 101:
+        nRecCh = int(1.*rf['3BData/Raw'].shape[0]/nFrames)
+    else:
+        raise Exception('Unknown data file format.')
+
+    print('3Brain data format: '+str(file_format))
 
     # Compute indices
-    rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'].value    
+    rawIndices = rf['3BRecInfo/3BMeaStreams/Raw/Chs'].value
 
-    # Name channels ([0..4095] for fullarray files) 
-    chIndices = [(x-1) + (y-1)*nCols for (y,x) in rawIndices] 
+    # Name channels ([0..4095] for fullarray files)
+    chIndices = [(x-1) + (y-1)*nCols for (y,x) in rawIndices]
     # chIndices = [(x-1) + (y-1)*nCols for (x,y) in rawIndices] # Swap X and Y (old format)
 
-    return (nFrames, samplingRate, nRecCh, chIndices)
+    return (nFrames, samplingRate, nRecCh, chIndices, file_format)
 
 def readHDF5(rf, t0, t1):
-    ''' In order to use the algorithms designed for the old format, 
+    ''' In order to use the algorithms designed for the old format,
     the input data must be inverted.'''
-    return 4095 - rf['3BData/Raw'][t0:t1].flatten() 
+    return 4095 - rf['3BData/Raw'][t0:t1].flatten()
 
-def readHDF5t(rf, t0, t1):
+def readHDF5t_100(rf, t0, t1, nch):
     ''' Transposed version for the interpolation method. '''
     if t0 <= t1:
         return 4095 - rf['3BData/Raw'][t0:t1].flatten('F')
     else: # Reversed read
-        return 4095 - rf['3BData/Raw'][t1:t0].flatten('F') 
+        return 4095 - rf['3BData/Raw'][t1:t0].flatten('F')
+
+def readHDF5t_101(rf, t0, t1, nch):
+    ''' Transposed version for the interpolation method. '''
+    if t0 <= t1:
+        return rf['3BData/Raw'][nch*t0:nch*t1].reshape((-1,nch),order='C').flatten('F')
+    else: # Reversed read
+        return rf['3BData/Raw'][nch*t1:nch*t0].reshape((-1,nch),order='C').flatten('F')

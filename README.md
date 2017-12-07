@@ -17,6 +17,8 @@ Software for high density electrophysiology.
 
 # Latest news <a name="news"></a>
 
+- 25/11/17: We are currently developing a new implementation of these methods. Speed is much improved (7kHz from 4,096 channels can be analysed in real-time), and other dense probes such as Neuropixel are supported (with better than real-time performance). If you would like to try it, [get in touch with us](http://homepages.inf.ed.ac.uk/mhennig/contact/).
+
 * The spike sorting method is now published in a paper in [Cell Reports](http://www.cell.com/cell-reports/fulltext/S2211-1247(17)30236-X).
 
 * There is now an implementations of the detection methods in python/C++, which can easily be adjusted to read any raw data file format. Code is currently provided to read the hdf5-based format used by BrainwaveX. Performance is substantially improved compare to the original C# implementations. This improvement was done by [Albert Puente Encinas](https://github.com/albertpuente).

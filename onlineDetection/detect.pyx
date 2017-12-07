@@ -21,7 +21,7 @@ class bcolors: # Only for unix progress output
 cdef extern from "SpkDonline.h" namespace "SpkDonline":
     cdef cppclass Detection:
         Detection() except +
-        void InitDetection(long nFrames, double nSec, int sf, int NCh, long tInc, 
+        void InitDetection(long nFrames, double nSec, int sf, int NCh, long tInc,
                            long int * Indices, unsigned int nCPU)
         void SetInitialParams(int thres, int maa, int ahpthr, int maxsl, int minsl)
         void openSpikeFile(const char * name)
@@ -36,7 +36,7 @@ def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = 
     # Read data from a .brw (HDF5) file
     rf = openHDF5file(filePath)
     nFrames, samplingRate, nRecCh, chIndices = getHDF5params(rf)
-   
+
     # Duration of the recording in seconds
     nSec = nFrames / samplingRate
 
@@ -60,14 +60,14 @@ def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = 
     # Allocate indices and vm
     cdef np.ndarray[long, mode = "c"] Indices = np.asarray(chIndices, dtype=ctypes.c_long)
     cdef np.ndarray[unsigned short, mode = "c"] vm = np.zeros((nRecCh * tInc), dtype=ctypes.c_ushort)
-    
+
     # Initialise detection algorithm
     det.InitDetection(nFrames, nSec, int(samplingRate), nRecCh, tInc, &Indices[0], nCPU)
 
     # Set the parameters: int thres, int maa, int ahpthr, int maxsl,  int minsl
 
     # Threshold to detect spikes >11 is likely to be real spikes, but can and should be sorted afterwards
-    if not Threshold: 
+    if not Threshold:
         Threshold = 9
     # Signal should go below that threshold within MaxSl-Slmin frames
     if not MinAvgAmp:
@@ -83,22 +83,22 @@ def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = 
         MinSl = int(samplingRate * 0.3 / 1000 + 0.5)
 
     det.SetInitialParams(Threshold, MinAvgAmp, AHPthr, MaxSl, MinSl)
-    
+
     # Open output file
-    spikefilename = str.encode(os.path.splitext(filePath)[0] + "_SpikesSYCL.txt")
+    spikefilename = str.encode(os.path.splitext(filePath)[0] + "_Spikes.txt")
     det.openSpikeFile(spikefilename)
 
-    # Setup timers  
-    readT = medianT = iterateT = 0.0; 
-    
-    # For each chunk of data 
+    # Setup timers
+    readT = medianT = iterateT = 0.0;
+
+    # For each chunk of data
     t0 = 0
     while t0 + tInc <= nFrames:
         t1 = t0 + tInc
 
         # Display progress bar (unix only)
-        if os.name == 'posix': 
-            displayProgress(t0, t1, nFrames)      
+        if os.name == 'posix':
+            displayProgress(t0, t1, nFrames)
 
         # Read data
         print '# Reading', t1-t0, 'frames...'
@@ -111,9 +111,9 @@ def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = 
         # Compute median voltage
         print '# Computing median voltage...'
         tic = time.time()
-        det.MeanVoltage(&vm[0], tInc) #  det.MedianVoltage(&vm[0]) 
+        det.MeanVoltage(&vm[0], tInc) #  det.MedianVoltage(&vm[0])
         medianT += time.time() - tic
-        
+
         # Detect spikes
         print '# Detecting spikes...'
         tic = time.time()
@@ -122,13 +122,13 @@ def detect(filePath, Threshold = None, MinAvgAmp = None, AHPthr = None, MaxSl = 
 
         t0 += tInc - tCut # Advance across time
         if t0 < nFrames - tCut: # Last chunk can be smaller
-            tInc = min(tInc, nFrames - t0)    
+            tInc = min(tInc, nFrames - t0)
 
     det.FinishDetection()
 
     # Display progress bar (unix only)
-    if os.name == 'posix': 
-        displayProgress(t0, t1, nFrames)    
+    if os.name == 'posix':
+        displayProgress(t0, t1, nFrames)
 
     totalT = readT + medianT + iterateT
     print '# Elapsed time:', totalT, 's'
