@@ -18,16 +18,17 @@ import numpy as np
 import warnings
 
 from collections import defaultdict
-from ..externals import six
-from ..utils.validation import check_is_fitted
-from ..utils import extmath, check_random_state, gen_batches, check_array
-from ..base import BaseEstimator, ClusterMixin
-from ..neighbors import NearestNeighbors
-from ..metrics.pairwise import pairwise_distances_argmin
-from ..externals.joblib import Parallel
-from ..externals.joblib import effective_n_jobs
-from ..externals.joblib import delayed
-from ..externals.joblib.pool import has_shareable_memory
+from sklearn.externals import six
+from sklearn.utils.validation import check_is_fitted
+from sklearn.utils import extmath, check_random_state, gen_batches, check_array
+from sklearn.base import BaseEstimator, ClusterMixin
+from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics.pairwise import pairwise_distances_argmin
+from sklearn.externals.joblib import Parallel
+from sklearn.externals.joblib import effective_n_jobs
+from sklearn.externals.joblib import delayed
+from sklearn.externals.joblib.pool import has_shareable_memory
+from scipy.linalg import norm
 
 def estimate_bandwidth(X, quantile=0.3, n_samples=None, random_state=0,
                        n_jobs=1):
@@ -92,7 +93,7 @@ def _mean_shift_single_seed(my_mean, X, nbrs, max_iter):
         my_old_mean = my_mean  # save the old mean
         my_mean = np.mean(points_within, axis=0)
         # If converged or at max_iter, adds the cluster
-        if (extmath.norm(my_mean - my_old_mean) < stop_thresh or
+        if (norm(my_mean - my_old_mean) < stop_thresh or
                 completed_iterations == max_iter):
             return tuple(my_mean), len(points_within)
         completed_iterations += 1
@@ -178,6 +179,9 @@ def mean_shift(X, bandwidth=None, seeds=None, bin_seeding=False,
     See examples/cluster/plot_mean_shift.py for an example.
 
     """
+
+    print("bin seeding: "+str(min_bin_freq))
+    print("n_jobs: "+str(n_jobs))
 
     if bandwidth is None:
         bandwidth = estimate_bandwidth(X, n_jobs=n_jobs)

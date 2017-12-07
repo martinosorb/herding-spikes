@@ -196,7 +196,7 @@ if __name__ == "__main__":
     # cluster data
     scorePCA = O.ShapePCA(ncomp=2, white=True, offset=shoffset, upto=upto)
     startTime = datetime.now()
-    O.CombinedMeanShift(h, alpha, scorePCA, mbf=mbf)
+    O.CombinedMeanShift(h, alpha, scorePCA, mbf=mbf, njobs=-1)
     print('Time taken for sorting: ' + str(datetime.now() - startTime))
 
     # save data
