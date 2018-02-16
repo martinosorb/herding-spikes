@@ -9,7 +9,7 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import __version__ as skvers
-from sklearn.cluster import MeanShift
+from mean_shift_ import MeanShift 
 from sklearn.decomposition import PCA
 from sklearn import svm, mixture
 from sklearn.metrics.pairwise import euclidean_distances
